@@ -1,0 +1,31 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:id="@+id/tweetContainer">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/mapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/tvTweetCount"
+            android:layout_marginLeft="10dp"
+            android:textColor="#FFFFFFFF"
+            android:layout_marginTop="10dp"
+            android:background="#32000000"
+            android:padding="3dp" />
+
+        <com.turgutsaricam.trendcatcher.MapUtilsView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/mapUtilsView"/>
+
+    </FrameLayout>
+</RelativeLayout>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+    <item
+        android:id="@+id/menuSwitchMapUtils"
+        android:icon="@drawable/ic_draw"
+        android:title="Switch Drawing/Map"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menuListTweets"
+        android:icon="@drawable/ic_tweet_list"
+        android:title="List Tweets"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menuClearTweets"
+        android:icon="@drawable/ic_tweet_list"
+        android:title="Clear Tweets"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/menuStopStream"
+        android:icon="@drawable/ic_tweet_list"
+        android:title="End Stream"
+        app:showAsAction="never" />
+</menu>

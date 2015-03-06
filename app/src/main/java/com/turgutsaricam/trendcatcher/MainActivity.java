@@ -201,8 +201,10 @@ public class MainActivity extends ActionBarActivity
         FragmentManager fm = getSupportFragmentManager();
         ShowMapFragment fragment = (ShowMapFragment) fm.findFragmentByTag("ShowMapFragment");
         if(fragment != null) {
-            mAllTweets.clear();
-            mAllTweets.addAll(fragment.getAllTweets());
+            if(fragment.getAllTweets().size() > mAllTweets.size()) {
+                mAllTweets.clear();
+                mAllTweets.addAll(fragment.getAllTweets());
+            }
         }
 
         return mAllTweets;

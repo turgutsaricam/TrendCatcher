@@ -322,12 +322,14 @@ public class NavigationDrawerFragment extends Fragment {
      */
     public final String[] itemNames = new String[] {
             "Map",
-            "Tweets"
+            "Profile Photos",
+            "Tweet Photos"
     };
 
     final int[] itemIcons = new int[] {
             R.drawable.ic_drawer_room,
-            R.drawable.ic_chat
+            R.drawable.ic_chat,
+            0
     };
 
     private void populateLists() {

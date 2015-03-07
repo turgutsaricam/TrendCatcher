@@ -94,7 +94,7 @@
     <orderEntry type="library" exported="" name="twitter4j-async-4.0.2" level="project" />
     <orderEntry type="library" exported="" name="twitter4j-media-support-4.0.2" level="project" />
     <orderEntry type="library" exported="" name="retrofit-1.6.1" level="project" />
-    <orderEntry type="library" exported="" name="picasso-2.3.2" level="project" />
+    <orderEntry type="library" exported="" name="picasso-2.5.0" level="project" />
     <orderEntry type="library" exported="" name="play-services-6.5.87" level="project" />
     <orderEntry type="library" exported="" name="tweet-ui-1.0.5" level="project" />
     <orderEntry type="library" exported="" name="tweet-composer-0.7.3" level="project" />

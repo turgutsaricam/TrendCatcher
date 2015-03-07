@@ -14,12 +14,16 @@
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/menuClearTweets"
-        android:icon="@drawable/ic_tweet_list"
         android:title="Clear Tweets"
         app:showAsAction="never" />
     <item
         android:id="@+id/menuStopStream"
-        android:icon="@drawable/ic_tweet_list"
         android:title="End Stream"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/menuKeepScreenOn"
+        android:title="Keep screen on"
+        app:showAsAction="never"
+        android:checkable="true"
+        android:checked="true"/>
 </menu>

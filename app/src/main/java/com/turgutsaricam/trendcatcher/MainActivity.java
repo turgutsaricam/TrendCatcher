@@ -37,7 +37,8 @@ public class MainActivity extends ActionBarActivity
         implements NavigationDrawerFragment.NavigationDrawerCallbacks,
         ShowMapFragment.CommunicatorShowMapFragment,
         DialogShowTweets.CommunicatorDialogShowTweets,
-        MapUtilsView.CommunicatorMapUtilsView
+        MapUtilsView.CommunicatorMapUtilsView,
+        ProfilePhotosFragment.CommunicatorProfilePhotosFragment
 {
 
     private NavigationDrawerFragment mNavigationDrawerFragment;
@@ -120,16 +121,25 @@ public class MainActivity extends ActionBarActivity
         FragmentManager fragmentManager = getSupportFragmentManager();
         Fragment fragment = null;
         String tag = "";
+        Bundle args;
         switch (position) {
             case 0:
                 fragment = new ShowMapFragment();
                 tag = "ShowMapFragment";
                 break;
             case 1:
-                makeToast("Nope");
+                fragment = new ProfilePhotosFragment();
+                tag = "ProfilePhotosFragment";
+                args = new Bundle();
+                args.putBoolean(ProfilePhotosFragment.LOAD_TWEET_PHOTOS, false);
+                fragment.setArguments(args);
                 break;
             case 2:
-//                logOut();
+                fragment = new ProfilePhotosFragment();
+                tag = "ProfilePhotosFragment";
+                args = new Bundle();
+                args.putBoolean(ProfilePhotosFragment.LOAD_TWEET_PHOTOS, true);
+                fragment.setArguments(args);
                 break;
         }
 
@@ -262,5 +272,10 @@ public class MainActivity extends ActionBarActivity
         if(fragment != null) {
             fragment.getScreenCoords(leftBottomX, leftBottomY, rightTopX, rightTopY);
         }
+    }
+
+    @Override
+    public List<ShowMapFragment.StreamObject> getStreamObjects() {
+        return mAllStreamObjects;
     }
 }

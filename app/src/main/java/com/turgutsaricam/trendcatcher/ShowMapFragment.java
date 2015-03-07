@@ -189,6 +189,7 @@ public class ShowMapFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         v = inflater.inflate(R.layout.show_map_fragment, container, false);
+        v.setKeepScreenOn(true);
 
         // Get the mapview from xml layout file
         mapView = (MapView) v.findViewById(R.id.mapView);
@@ -676,6 +677,16 @@ public class ShowMapFragment extends Fragment {
                 break;
             case R.id.menuStopStream:
                 if(fetchTweetsTask != null) fetchTweetsTask.stopStream();
+                break;
+            case R.id.menuKeepScreenOn:
+                item.setChecked(!item.isChecked());
+
+                if(item.isChecked()) {
+                    v.setKeepScreenOn(true);
+                } else {
+                    v.setKeepScreenOn(false);
+                }
+
                 break;
         }
 

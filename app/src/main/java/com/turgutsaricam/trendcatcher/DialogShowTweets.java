@@ -8,10 +8,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
-import android.support.v4.app.Fragment;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -37,7 +34,7 @@ public class DialogShowTweets extends DialogFragment {
     ListView mListView;
 
     CommunicatorDialogShowTweets comm;
-    List<Status> mAllTweets = new ArrayList<Status>();
+    List<ShowMapFragment.StreamObject> mAllStreamObjects = new ArrayList<ShowMapFragment.StreamObject>();
     String timeDifference = "";
 
     @Override
@@ -91,16 +88,18 @@ public class DialogShowTweets extends DialogFragment {
     }
 
     private void populateList() {
-        mAllTweets.clear();
-        mAllTweets.addAll(comm.requestTweetList());
-        Collections.reverse(mAllTweets);
+        mAllStreamObjects.clear();
+        mAllStreamObjects.addAll(comm.requestStreamObjects());
+        Collections.reverse(mAllStreamObjects);
 
         timeDifference = comm.requestTimeDifference();
 
         // Get tweet ids
         List<Long> tweetIds = new ArrayList<Long>();
-        for(Status status : mAllTweets) {
-            tweetIds.add(status.getId());
+        for(ShowMapFragment.StreamObject so : mAllStreamObjects) {
+            for (Status status : so.getTweets()) {
+                tweetIds.add(status.getId());
+            }
         }
 
         // Set up the adapter and add tweets
@@ -116,7 +115,11 @@ public class DialogShowTweets extends DialogFragment {
             public void success(List<Tweet> tweets) {
                 Button neutralButton = dialog.getButton(Dialog.BUTTON_NEUTRAL);
                 String s = count > 1 ? "s" : "";
-                neutralButton.setText("OK (Last " + count + "/" + mAllTweets.size() + " tweet" + s + " - " + timeDifference + ")");
+                int totalTweetCount = 0;
+                for(ShowMapFragment.StreamObject so : mAllStreamObjects) {
+                    totalTweetCount += so.getTweets().size();
+                }
+                neutralButton.setText("OK (Last " + count + "/" + totalTweetCount + " tweet" + s + " - " + timeDifference + ")");
             }
 
             @Override
@@ -127,7 +130,7 @@ public class DialogShowTweets extends DialogFragment {
     }
 
     public interface CommunicatorDialogShowTweets {
-        public List<Status> requestTweetList();
+        public List<ShowMapFragment.StreamObject> requestStreamObjects();
         public String requestTimeDifference();
     }
 }

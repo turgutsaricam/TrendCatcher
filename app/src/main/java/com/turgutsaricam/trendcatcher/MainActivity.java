@@ -189,38 +189,40 @@ public class MainActivity extends ActionBarActivity
         return super.onOptionsItemSelected(item);
     }
 
-    List<twitter4j.Status> mAllTweets = new ArrayList<Status>();
+    List<ShowMapFragment.StreamObject> mAllStreamObjects = new ArrayList<ShowMapFragment.StreamObject>();
     @Override
-    public void setAllTweets(List<Status> tweetList) {
-        mAllTweets.clear();
-        mAllTweets.addAll(tweetList);
+    public void setAllStreamObjects(List<ShowMapFragment.StreamObject> tweetList) {
+        mAllStreamObjects.clear();
+        mAllStreamObjects.addAll(tweetList);
     }
 
     @Override
-    public List<Status> getAllTweets() {
+    public List<ShowMapFragment.StreamObject> getAllStreamObjects() {
         FragmentManager fm = getSupportFragmentManager();
         ShowMapFragment fragment = (ShowMapFragment) fm.findFragmentByTag("ShowMapFragment");
         if(fragment != null) {
-            if(fragment.getAllTweets().size() > mAllTweets.size()) {
-                mAllTweets.clear();
-                mAllTweets.addAll(fragment.getAllTweets());
+            if(fragment.getAllStreamObjects().size() > mAllStreamObjects.size()) {
+                mAllStreamObjects.clear();
+                mAllStreamObjects.addAll(fragment.getAllStreamObjects());
             }
         }
 
-        return mAllTweets;
+        return mAllStreamObjects;
     }
 
     long streamStartEpoch = 0;
     long streamEndEpoch = 0;
     @Override
-    public void setStreamStartTime(long epochInMillis) {
-        streamStartEpoch = epochInMillis;
+    public long setStreamStartTime() {
+        streamStartEpoch = Calendar.getInstance().getTimeInMillis();
         streamEndEpoch = 0;
+        return streamStartEpoch;
     }
 
     @Override
-    public void setStreamEndTime(long epochInMillis) {
-        streamEndEpoch = epochInMillis;
+    public long setStreamEndTime() {
+        streamEndEpoch = Calendar.getInstance().getTimeInMillis();
+        return streamEndEpoch;
     }
 
     public String calculateTimeDifference(long startEpochInMillis) {
@@ -243,8 +245,8 @@ public class MainActivity extends ActionBarActivity
     }
 
     @Override
-    public List<Status> requestTweetList() {
-        return getAllTweets();
+    public List<ShowMapFragment.StreamObject> requestStreamObjects() {
+        return getAllStreamObjects();
     }
 
     @Override

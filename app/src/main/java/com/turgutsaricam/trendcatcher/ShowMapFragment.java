@@ -9,6 +9,7 @@ import android.graphics.Rect;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -18,6 +19,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Chronometer;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +30,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -35,17 +38,24 @@ import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 
 import twitter4j.FilterQuery;
 import twitter4j.GeoLocation;
+import twitter4j.Query;
+import twitter4j.QueryResult;
 import twitter4j.StallWarning;
 import twitter4j.Status;
 import twitter4j.StatusDeletionNotice;
 import twitter4j.StatusListener;
+import twitter4j.Twitter;
+import twitter4j.TwitterException;
+import twitter4j.TwitterFactory;
 import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
 import twitter4j.conf.ConfigurationBuilder;
@@ -59,11 +69,11 @@ public class ShowMapFragment extends Fragment {
     CameraUpdate cameraUpdate;
 
     MapUtilsView mapUtilsView;
-    TextView tvTweetCount;
+    TextView tvTweetCount, tvCurrentStreamTweetCount;
     EditText etTweetLimit;
+    Chronometer chronometer;
 
     FetchTweetsTask fetchTweetsTask;
-    List<twitter4j.Status> mAllTweets = new ArrayList<twitter4j.Status>();
     private int TWEET_COUNT_LIMIT = 500;
 
     private List<HashMap<String, String>> mTweets = new ArrayList<HashMap<String,String>>();
@@ -71,7 +81,96 @@ public class ShowMapFragment extends Fragment {
     CommunicatorShowMapFragment comm;
     DecimalFormat df;
 
-    List<Polyline> allMapRectangles = new ArrayList<Polyline>();
+    List<StreamObject> allStreamObjects = new ArrayList<StreamObject>();
+
+    final int COLOR_RED = Color.rgb(244, 67, 54);
+    final int COLOR_BLUE = Color.rgb(3, 169, 244);
+
+    long streamStartTime = 0l;
+    long streamEndTime = 0l;
+
+    long streamCount = 0;
+    
+    public static class StreamObject {
+        private long id;
+        private Polyline mapRectangle;
+        private long startEpoch;
+        private long endEpoch;
+        private List<Status> tweets = new ArrayList<Status>();
+
+        LatLng leftTop, leftBottom, rightBottom, rightTop;
+
+        private int tweetLimit = 500;
+        String elapsedTime = "";
+        
+        public StreamObject(long id, Polyline mapRectangle, long startEpoch, int tweetLimit) {
+            this.id = id;
+            this.mapRectangle = mapRectangle;
+            this.startEpoch = startEpoch;
+            this.tweetLimit = tweetLimit;
+        }
+        
+        public void setStreamEnded(long endEpoch, GoogleMap map) {
+            this.endEpoch = endEpoch;
+            elapsedTime = calculateElapsedTime();
+
+            // TODO
+            String snippet = "Limit: " + tweetLimit + " tweets";
+            map.addMarker(new MarkerOptions()
+                .position(leftTop)
+                .title(tweets.size() + " tweets in " + elapsedTime)
+                .snippet(snippet)
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_info))
+            );
+
+            // Reset map rotation
+            CameraPosition cameraPosition = new CameraPosition(map.getCameraPosition().target,
+                    map.getCameraPosition().zoom, map.getCameraPosition().tilt, 0f);
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(cameraPosition);
+            map.animateCamera(cameraUpdate);
+        }
+        
+        public void setTweets(List<Status> tweets) {
+            this.tweets.clear();
+            this.tweets.addAll(tweets);
+        }
+        
+        public void addTweet(Status tweet) {
+            tweets.add(tweet);
+        }
+        
+        public void setCorners(LatLng leftTop, LatLng leftBottom, LatLng rightBottom, LatLng rightTop) {
+            this.leftTop = leftTop;
+            this.leftBottom = leftBottom;
+            this.rightBottom = rightBottom;
+            this.rightTop = rightTop;
+        }
+        
+        public long getId() { return id; }
+        public Polyline getMapRectangle() { return mapRectangle; }
+        public List<Status> getTweets() { return tweets; }
+        public long getStartEpoch() { return startEpoch; }
+        public long getEndEpoch() { return endEpoch; }
+        public int getTweetLimit() { return tweetLimit; }
+        public String getElapsedTime() { return elapsedTime; }
+
+        private String calculateElapsedTime() {
+            long millisDiff = endEpoch - startEpoch;
+
+            SimpleDateFormat dateFormat;
+            String addText = "";
+            if (millisDiff < 60 * 1000L) {
+                dateFormat = new SimpleDateFormat("ss", Locale.US);
+                addText = " sec";
+            } else if (millisDiff < 60 * 60 * 1000L) {
+                dateFormat = new SimpleDateFormat("mm:ss", Locale.US);
+            } else {
+                dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.US);
+            }
+
+            return dateFormat.format(new Date(millisDiff)) + addText;
+        }
+    }
 
     @Override
     public void onAttach(Activity activity) {
@@ -94,9 +193,10 @@ public class ShowMapFragment extends Fragment {
         // Get the mapview from xml layout file
         mapView = (MapView) v.findViewById(R.id.mapView);
         tvTweetCount = (TextView) v.findViewById(R.id.tvTweetCount);
+        tvCurrentStreamTweetCount = (TextView) v.findViewById(R.id.tvCurrentStreamTweetCount);
 
         mapUtilsView = (MapUtilsView) v.findViewById(R.id.mapUtilsView);
-
+        chronometer = (Chronometer) v.findViewById(R.id.chronometer);
         return v;
     }
 
@@ -114,6 +214,7 @@ public class ShowMapFragment extends Fragment {
         map.setMyLocationEnabled(true);
         map.getUiSettings().setZoomControlsEnabled(true);
         map.getUiSettings().setMyLocationButtonEnabled(true);
+        map.getUiSettings().setRotateGesturesEnabled(false);
         map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
 
         try {
@@ -147,28 +248,48 @@ public class ShowMapFragment extends Fragment {
     }
 
     private void loadAllTweets() {
-        mAllTweets.addAll(comm.getAllTweets());
-        LatLng latLngHolder;
-        GeoLocation geoLocationHolder;
-        for(Status status : mAllTweets) {
-            geoLocationHolder = status.getGeoLocation();
-            latLngHolder = new LatLng(
-                    geoLocationHolder.getLatitude(),
-                    geoLocationHolder.getLongitude()
+        allStreamObjects.addAll(comm.getAllStreamObjects());
+        for(StreamObject so : allStreamObjects) {
+            for (Status status: so.getTweets()) {
+                GeoLocation location = status.getGeoLocation();
+                LatLng latLng = new LatLng(
+                        location.getLatitude(),
+                        location.getLongitude()
+                );
+
+                Marker mMarker = map.addMarker(new MarkerOptions()
+                                .position(latLng)
+                                .title(status.getUser().getName() + " @" + status.getUser().getScreenName())
+                                .snippet(status.getText())
+                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_small))
+                );
+            }
+
+            // TODO
+            String snippet = "Limit: " + so.getTweetLimit()+ " tweets";
+            map.addMarker(new MarkerOptions()
+                            .position(so.leftTop)
+                            .title(so.tweets.size() + " tweets in " + so.elapsedTime)
+                            .snippet(snippet)
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_info2))
             );
 
-            map.addMarker(new MarkerOptions()
-                    .position(latLngHolder)
-                    .title(status.getUser().getName() + " @" + status.getUser().getScreenName())
-                    .snippet(status.getText())
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_small))
+            so.mapRectangle = map.addPolyline(new PolylineOptions()
+                            .add(so.leftBottom)
+                            .add(so.rightBottom)
+                            .add(so.rightTop)
+                            .add(so.leftTop)
+                            .add(so.leftBottom)
+                            .color(COLOR_BLUE)
+                            .width(2f)
             );
         }
 
-        tvTweetCount.setText(String.valueOf(mAllTweets.size()));
+        tvTweetCount.setText(String.valueOf(calculateTweetCount()));
     }
 
-    private void getTweetsFromStream(LatLng leftBottom, LatLng rightTop, LatLng rightBottom, LatLng leftTop) {
+    private void getTweetsFromStream(LatLng leftBottom, LatLng rightTop, LatLng rightBottom, LatLng leftTop,
+                                     double distanceInKM, LatLng centerLocation, int tweetLimit) {
         mapUtilsView.setActive(false);
 
         Polyline mapRectangle = map.addPolyline(new PolylineOptions()
@@ -177,25 +298,43 @@ public class ShowMapFragment extends Fragment {
                         .add(rightTop)
                         .add(leftTop)
                         .add(leftBottom)
-                        .color(Color.rgb(3, 169, 244))
+                        .color(COLOR_BLUE)
                         .width(2f)
         );
 
-        allMapRectangles.add(mapRectangle);
         switchMenuIcon(false, true);
+
+        makeToast("Getting tweets...");
+
+        // Cancel if there is a task running
+        cancelFetchTweetsTask();
 
         // Send stream starting time to main activity
         // to use it later on showing tweets list
-        comm.setStreamStartTime(Calendar.getInstance().getTimeInMillis());
+        streamStartTime = comm.setStreamStartTime();
+        chronometer.setBase(SystemClock.elapsedRealtime());
+        chronometer.start();
 
-        makeToast("Getting tweets...");
+        StreamObject mStreamObject = new StreamObject(++streamCount, mapRectangle, streamStartTime, tweetLimit);
+        mStreamObject.setCorners(leftTop, leftBottom, rightBottom, rightTop);
+        
+        allStreamObjects.add(mStreamObject);
+
+        // Set currentStreamTweetCount text view visible
+        tvCurrentStreamTweetCount.setVisibility(View.VISIBLE);
+        tvCurrentStreamTweetCount.setText("0");
 
 //        LatLng leftBottom = new LatLng(39.915557, 32.841728);
 //        LatLng rightTop = new LatLng(39.932539, 32.874387);
 
-        cancelFetchTweetsTask();
-        fetchTweetsTask = new FetchTweetsTask(leftBottom, rightTop, rightBottom, leftTop);
-        fetchTweetsTask.execute();
+        // First, search tweets in that area
+        Query query = new Query();
+        query.setGeoCode(new GeoLocation(centerLocation.latitude, centerLocation.longitude), distanceInKM, Query.KILOMETERS);
+        new SearchTweetsTask(query, mStreamObject).executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
+
+        // Next, get the stream
+        fetchTweetsTask = new FetchTweetsTask(mStreamObject);
+        fetchTweetsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
 
     }
 
@@ -207,6 +346,57 @@ public class ShowMapFragment extends Fragment {
         Log.e("ShowTweetsFragment", text);
     }
 
+    private class SearchTweetsTask extends AsyncTask<Void, Status, Void> {
+
+        Query mQuery = null;
+        
+        StreamObject streamObject;
+        LatLng leftTop, rightBottom;
+
+        protected SearchTweetsTask(Query mQuery, StreamObject streamObject) {
+            this.mQuery = mQuery;
+            this.leftTop = streamObject.leftTop;
+            this.rightBottom = streamObject.rightBottom;
+
+            this.streamObject = streamObject;
+
+            logIt("Query is: " + mQuery.toString());
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            ConfigurationBuilder cb = new ConfigurationBuilder();
+            cb.setDebugEnabled(true)
+                    .setOAuthConsumerKey(MyConstants.CONSUMER_KEY)
+                    .setOAuthConsumerSecret(MyConstants.CONSUMER_SECRET)
+                    .setOAuthAccessToken(MyConstants.ACCESS_TOKEN)
+                    .setOAuthAccessTokenSecret(MyConstants.ACCESS_TOKEN_SECRET);
+
+            TwitterFactory tf = new TwitterFactory(cb.build());
+            Twitter twitter = tf.getInstance();
+
+            try {
+                QueryResult queryResult = twitter.search(mQuery);
+                for(twitter4j.Status status : queryResult.getTweets()) {
+                    if(streamObject.getTweets().size() >= streamObject.getTweetLimit()) {
+                        break;
+                    }
+                    publishProgress(status);
+                }
+            } catch (TwitterException e) {
+                logIt(e.toString());
+            }
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(twitter4j.Status... values) {
+            if(isTweetInBoundaries(values[0], leftTop, rightBottom)) {
+                handleTakenStatus(values[0], streamObject);
+            }
+        }
+    }
+
     private class FetchTweetsTask extends AsyncTask<Void, twitter4j.Status, Void> {
 
         double[][] boundary;
@@ -215,20 +405,28 @@ public class ShowMapFragment extends Fragment {
 
         TwitterStream ts;
         LatLng leftBottom, rightTop, rightBottom, leftTop;
-
-        public FetchTweetsTask(LatLng leftBottom, LatLng rightTop, LatLng rightBottom, LatLng leftTop) {
+        
+        StreamObject streamObject;
+        
+        public FetchTweetsTask(StreamObject streamObject) {
+            this.streamObject = streamObject;
+            
+            this.leftBottom = streamObject.leftBottom;
+            this.rightTop = streamObject.rightTop;
+            this.rightBottom = streamObject.rightBottom;
+            this.leftTop = streamObject.leftTop;
             boundary = new double[][] {
                     {leftBottom.longitude, leftBottom.latitude},
                     {rightTop.longitude, rightTop.latitude}
             };
-            this.leftBottom = leftBottom;
-            this.rightTop = rightTop;
-            this.rightBottom = rightBottom;
-            this.leftTop = leftTop;
+
         }
 
         @Override
         protected void onPreExecute() {
+            // Set map rectangle color
+            streamObject.getMapRectangle().setColor(COLOR_RED);
+
             // Get authentication
             cb = new ConfigurationBuilder();
             cb.setDebugEnabled(true)
@@ -297,29 +495,15 @@ public class ShowMapFragment extends Fragment {
             logIt("...");
             logIt("New status published");
 
-            if(mAllTweets.size() < TWEET_COUNT_LIMIT) {
+            if(streamObject.getTweets().size() < streamObject.getTweetLimit()) {
                 twitter4j.Status currentStatus = values[0];
 
-                if(isTweetInBoundaries(currentStatus)) {
-                    // Add status to the list holding all of the tweets
-                    mAllTweets.add(currentStatus);
-
-                    GeoLocation location = currentStatus.getGeoLocation();
-                    LatLng latLng = new LatLng(
-                            location.getLatitude(),
-                            location.getLongitude()
-                    );
-
-                    Marker mMarker = map.addMarker(new MarkerOptions()
-                                    .position(latLng)
-                                    .title(currentStatus.getUser().getName() + " @" + currentStatus.getUser().getScreenName())
-                                    .snippet(currentStatus.getText())
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_small))
-                    );
-                    mMarker.showInfoWindow();
-                    tvTweetCount.setText(String.valueOf(mAllTweets.size()));
+                if(isTweetInBoundaries(currentStatus, leftTop, rightBottom)) {
+                    handleTakenStatus(currentStatus, streamObject);
                 }
-            } else {
+            }
+
+            if(streamObject.getTweets().size() >= streamObject.getTweetLimit()) {
                 stopStream();
             }
         }
@@ -334,47 +518,100 @@ public class ShowMapFragment extends Fragment {
                 ts.shutdown();
                 ts.clearListeners();
                 ts = null;
-                comm.setStreamEndTime(Calendar.getInstance().getTimeInMillis());
-                makeToast("Stream has been stopped.");
+
+                // Change the color of map rectangle
+                streamObject.getMapRectangle().setColor(COLOR_BLUE);
+
+                // Set stream end time
+                streamEndTime = comm.setStreamEndTime();
+                streamObject.setStreamEnded(streamEndTime, map);
+                chronometer.stop();
+
+                // Set current stream count text view insivible
+                tvCurrentStreamTweetCount.setVisibility(View.GONE);
+
             }
         }
 
-        public boolean isTweetInBoundaries(twitter4j.Status status) {
-            double statusLat = status.getGeoLocation().getLatitude();
-            double statusLng = status.getGeoLocation().getLongitude();
-
-            Point pLeftTop = map.getProjection().toScreenLocation(leftTop);
-            Point pRightBottom = map.getProjection().toScreenLocation(rightBottom);
-
-            Rect boundaryRect = new Rect(pLeftTop.x, pLeftTop.y, pRightBottom.x, pRightBottom.y);
-            Point pTweet = map.getProjection().toScreenLocation(new LatLng(statusLat, statusLng));
-            if(boundaryRect.contains(pTweet.x, pTweet.y)) {
-                return true;
-            }
-
-            return false;
+        public boolean isStreamActive() {
+            return ts != null;
         }
+
+    }
+
+    public boolean isTweetInBoundaries(twitter4j.Status status, LatLng leftTop, LatLng rightBottom) {
+        double statusLat = status.getGeoLocation().getLatitude();
+        double statusLng = status.getGeoLocation().getLongitude();
+
+        Point pLeftTop = map.getProjection().toScreenLocation(leftTop);
+        Point pRightBottom = map.getProjection().toScreenLocation(rightBottom);
+
+        Rect boundaryRect = new Rect(pLeftTop.x, pLeftTop.y, pRightBottom.x, pRightBottom.y);
+        Point pTweet = map.getProjection().toScreenLocation(new LatLng(statusLat, statusLng));
+        if(boundaryRect.contains(pTweet.x, pTweet.y)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private void handleTakenStatus(Status currentStatus, StreamObject streamObject) {
+        GeoLocation location = currentStatus.getGeoLocation();
+        LatLng latLng = new LatLng(
+                location.getLatitude(),
+                location.getLongitude()
+        );
+
+        Marker mMarker = map.addMarker(new MarkerOptions()
+                        .position(latLng)
+                        .title(currentStatus.getUser().getName() + " @" + currentStatus.getUser().getScreenName())
+                        .snippet(currentStatus.getText())
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_small))
+        );
+        mMarker.showInfoWindow();
+
+        // Add status to the list holding all of the tweets
+        streamObject.addTweet(currentStatus);
+
+        tvTweetCount.setText(String.valueOf(calculateTweetCount()));
+        tvCurrentStreamTweetCount.setText(streamObject.getTweets().size() + "/" + streamObject.getTweetLimit());
+    }
+
+    public int calculateTweetCount() {
+        int count = 0;
+        for(StreamObject so : allStreamObjects) {
+            count += so.getTweets().size();
+        }
+        return count;
     }
 
     public void getScreenCoords(float leftBottomX, float leftBottomY, float rightTopX, float rightTopY) {
 //        logIt("leftBottom: " + leftBottomX + " - " + leftBottomY);
 //        logIt("rightTop: " + rightTopX + " - " + rightTopY);
-        final LatLng leftBottom = map.getProjection().fromScreenLocation(new Point((int) leftBottomX, (int) leftBottomY));
-        final LatLng rightTop = map.getProjection().fromScreenLocation(new Point((int) rightTopX, (int) rightTopY));
-
         final LatLng rightBottom = map.getProjection().fromScreenLocation(new Point((int) rightTopX, (int) leftBottomY));
         final LatLng leftTop = map.getProjection().fromScreenLocation(new Point((int) leftBottomX, (int) rightTopY));
+
+        // Find a radius that encapsulates the selected area
+        final LatLng leftBottom = map.getProjection().fromScreenLocation(new Point((int) leftBottomX, (int) leftBottomY));
+        final LatLng rightTop = map.getProjection().fromScreenLocation(new Point((int) rightTopX, (int) rightTopY));
 
         float[] results = new float[1];
         Location.distanceBetween(leftBottom.latitude, leftBottom.longitude, rightTop.latitude, rightTop.longitude, results);
 
-        String distanceInKM = df.format((double) (results[0]/1000));
+//        final String distanceInKM = df.format((double) (results[0]/1000));
+        final double distanceInKM = (double) (results[0]/1000);
         logIt("Distance is " + distanceInKM + " km");
-        logIt("LeftBottom: " + leftBottom.toString());
-        logIt("RightTop: " + rightTop.toString());
 
+        // Find the center geolocation of the selected area
+        float centerX = (leftBottomX + rightTopX) / 2;
+        float centerY = (leftBottomY + rightTopY) / 2;
+
+        final LatLng centerLocation = map.getProjection().fromScreenLocation(new Point((int) centerX, (int) centerY));
+        logIt("Center Location: " + centerLocation.toString());
+
+        // Show a dialog to the user for confirmation and tweet limit arrangement
         String messageAddition = "";
-        if(fetchTweetsTask != null && fetchTweetsTask.getStatus() == AsyncTask.Status.RUNNING) {
+        if(fetchTweetsTask != null && fetchTweetsTask.isStreamActive()) {
             messageAddition = " Current stream will be cancelled.";
         }
 
@@ -397,7 +634,7 @@ public class ShowMapFragment extends Fragment {
                             makeToast("Tweet limit input is empty. Limit is set to 500.");
                             TWEET_COUNT_LIMIT = 500;
                         }
-                        getTweetsFromStream(leftBottom, rightTop, rightBottom, leftTop);
+                        getTweetsFromStream(leftBottom, rightTop, rightBottom, leftTop, distanceInKM, centerLocation, TWEET_COUNT_LIMIT);
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -422,7 +659,7 @@ public class ShowMapFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menuListTweets:
-                comm.setAllTweets(mAllTweets);
+                comm.setAllStreamObjects(allStreamObjects);
                 DialogShowTweets dialog = new DialogShowTweets();
                 dialog.show(getActivity().getSupportFragmentManager(), "DialogShowTweets");
                 break;
@@ -433,9 +670,9 @@ public class ShowMapFragment extends Fragment {
                 break;
             case R.id.menuClearTweets:
                 map.clear();
-                mAllTweets.clear();
-                comm.setAllTweets(mAllTweets);
-                tvTweetCount.setText(String.valueOf(mAllTweets.size()));
+                allStreamObjects.clear();
+                comm.setAllStreamObjects(allStreamObjects);
+                tvTweetCount.setText(String.valueOf(calculateTweetCount()));
                 break;
             case R.id.menuStopStream:
                 if(fetchTweetsTask != null) fetchTweetsTask.stopStream();
@@ -481,17 +718,17 @@ public class ShowMapFragment extends Fragment {
 
         super.onDestroy();
         mapView.onDestroy();
-        comm.setAllTweets(mAllTweets);
+        comm.setAllStreamObjects(allStreamObjects);
     }
 
     public interface CommunicatorShowMapFragment {
-        public void setAllTweets(List<twitter4j.Status> tweetList);
-        public List<twitter4j.Status> getAllTweets();
-        public void setStreamStartTime(long epochInMillis);
-        public void setStreamEndTime(long epochInMillis);
+        public void setAllStreamObjects(List<StreamObject> streamObjects);
+        public List<ShowMapFragment.StreamObject> getAllStreamObjects();
+        public long setStreamStartTime();
+        public long setStreamEndTime();
     }
 
-    public List<Status> getAllTweets() {
-        return mAllTweets;
+    public List<StreamObject> getAllStreamObjects() {
+        return allStreamObjects;
     }
 }

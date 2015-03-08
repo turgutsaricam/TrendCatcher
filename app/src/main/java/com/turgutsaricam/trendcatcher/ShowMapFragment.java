@@ -1,8 +1,11 @@
 package com.turgutsaricam.trendcatcher;
 
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -40,6 +43,7 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -90,7 +94,7 @@ public class ShowMapFragment extends Fragment {
     long streamEndTime = 0l;
 
     long streamCount = 0;
-    
+
     public static class StreamObject {
         private long id;
         private Polyline mapRectangle;
@@ -101,7 +105,9 @@ public class ShowMapFragment extends Fragment {
         LatLng leftTop, leftBottom, rightBottom, rightTop;
 
         private int tweetLimit = 500;
+        private long durationLimit = 0;
         String elapsedTime = "";
+        String status = "";
         
         public StreamObject(long id, Polyline mapRectangle, long startEpoch, int tweetLimit) {
             this.id = id;
@@ -109,14 +115,24 @@ public class ShowMapFragment extends Fragment {
             this.startEpoch = startEpoch;
             this.tweetLimit = tweetLimit;
         }
-        
-        public void setStreamEnded(long endEpoch, GoogleMap map) {
+
+        public void setDurationLimit(long durationInMillis) {
+            durationLimit = durationInMillis;
+        }
+
+        public void setStreamEnded(long endEpoch, GoogleMap map, boolean manuallyEnded) {
             this.endEpoch = endEpoch;
-            elapsedTime = calculateElapsedTime();
+            elapsedTime = getTimeAsDate(false);
 
             // TODO
-            String snippet = "Limit: " + tweetLimit + " tweets";
-            Marker marker = map.addMarker(new MarkerOptions()
+            String snippet = "Tweet Limit: " + tweetLimit + "\nDuration limit: " + getTimeAsDate(true);
+            if(manuallyEnded) {
+                snippet += "\nStatus: Interrupted";
+            } else {
+                snippet += "\nStatus: Finished";
+            }
+
+            map.addMarker(new MarkerOptions()
                 .position(leftTop)
                 .title(tweets.size() + " tweets in " + elapsedTime)
                 .snippet(snippet)
@@ -153,9 +169,18 @@ public class ShowMapFragment extends Fragment {
         public long getEndEpoch() { return endEpoch; }
         public int getTweetLimit() { return tweetLimit; }
         public String getElapsedTime() { return elapsedTime; }
+        public long getDurationLimit() { return durationLimit; }
 
-        private String calculateElapsedTime() {
-            long millisDiff = endEpoch - startEpoch;
+        private String getTimeAsDate(boolean isDurationLimit) {
+            long millisDiff;
+            if(!isDurationLimit) {
+                millisDiff = endEpoch - startEpoch;
+            } else {
+                millisDiff = durationLimit;
+                if(durationLimit == 0) {
+                    return "infinite";
+                }
+            }
 
             SimpleDateFormat dateFormat;
             String addText = "";
@@ -170,6 +195,7 @@ public class ShowMapFragment extends Fragment {
 
             return dateFormat.format(new Date(millisDiff)) + addText;
         }
+
     }
 
     @Override
@@ -258,11 +284,11 @@ public class ShowMapFragment extends Fragment {
                         location.getLongitude()
                 );
 
-                Marker mMarker = map.addMarker(new MarkerOptions()
-                                .position(latLng)
-                                .title(status.getUser().getName() + " @" + status.getUser().getScreenName())
-                                .snippet(status.getText())
-                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_small))
+                map.addMarker(new MarkerOptions()
+                            .position(latLng)
+                            .title(status.getUser().getName() + " @" + status.getUser().getScreenName())
+                            .snippet(status.getText())
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_small))
                 );
             }
 
@@ -290,7 +316,7 @@ public class ShowMapFragment extends Fragment {
     }
 
     private void getTweetsFromStream(LatLng leftBottom, LatLng rightTop, LatLng rightBottom, LatLng leftTop,
-                                     double distanceInKM, LatLng centerLocation, int tweetLimit) {
+                                     double distanceInKM, LatLng centerLocation, int tweetLimit, final long duration) {
         mapUtilsView.setActive(false);
 
         Polyline mapRectangle = map.addPolyline(new PolylineOptions()
@@ -308,7 +334,7 @@ public class ShowMapFragment extends Fragment {
         makeToast("Getting tweets...");
 
         // Cancel if there is a task running
-        cancelFetchTweetsTask();
+        cancelFetchTweetsTask(true);
 
         // Send stream starting time to main activity
         // to use it later on showing tweets list
@@ -318,7 +344,23 @@ public class ShowMapFragment extends Fragment {
 
         StreamObject mStreamObject = new StreamObject(++streamCount, mapRectangle, streamStartTime, tweetLimit);
         mStreamObject.setCorners(leftTop, leftBottom, rightBottom, rightTop);
-        
+        mStreamObject.setDurationLimit(duration);
+
+        // Set the chronometer tick listener so that current stream is shut down
+        // when the duration is reached.
+        if(duration != 0) {
+            chronometer.setOnChronometerTickListener(new Chronometer.OnChronometerTickListener() {
+                @Override
+                public void onChronometerTick(Chronometer chronometer) {
+                    if((SystemClock.elapsedRealtime() - chronometer.getBase()) >= duration) {
+                        cancelFetchTweetsTask(false);
+                    }
+                }
+            });
+        } else {
+            chronometer.setOnChronometerTickListener(null);
+        }
+
         allStreamObjects.add(mStreamObject);
 
         // Set currentStreamTweetCount text view visible
@@ -440,7 +482,7 @@ public class ShowMapFragment extends Fragment {
             statusListener = new StatusListener() {
                 @Override
                 public void onStatus(twitter4j.Status status) {
-                    logIt(status.getUser().getName() + " -> " + status.getText());
+//                    logIt(status.getUser().getName() + " -> " + status.getText());
                     GeoLocation location = status.getGeoLocation();
                     if(location != null) {
                         publishProgress(status);
@@ -493,7 +535,6 @@ public class ShowMapFragment extends Fragment {
 
         @Override
         protected void onProgressUpdate(twitter4j.Status... values) {
-            logIt("...");
             logIt("New status published");
 
             if(streamObject.getTweets().size() < streamObject.getTweetLimit()) {
@@ -501,11 +542,12 @@ public class ShowMapFragment extends Fragment {
 
                 if(isTweetInBoundaries(currentStatus, leftTop, rightBottom)) {
                     handleTakenStatus(currentStatus, streamObject);
+                    logIt("   Status added.");
                 }
             }
 
             if(streamObject.getTweets().size() >= streamObject.getTweetLimit()) {
-                stopStream();
+                stopStream(false);
             }
         }
 
@@ -514,7 +556,7 @@ public class ShowMapFragment extends Fragment {
             logIt("onPostExecute");
         }
 
-        public void stopStream() {
+        public void stopStream(boolean manuallyEnded) {
             if(ts != null) {
                 ts.shutdown();
                 ts.clearListeners();
@@ -525,7 +567,7 @@ public class ShowMapFragment extends Fragment {
 
                 // Set stream end time
                 streamEndTime = comm.setStreamEndTime();
-                streamObject.setStreamEnded(streamEndTime, map);
+                streamObject.setStreamEnded(streamEndTime, map, manuallyEnded);
                 chronometer.stop();
 
                 // Set current stream count text view insivible
@@ -620,6 +662,8 @@ public class ShowMapFragment extends Fragment {
         etTweetLimit = (EditText) v.findViewById(R.id.etTweetCountLimit);
         etTweetLimit.setText(String.valueOf(TWEET_COUNT_LIMIT));
 
+        final EditText etDurationLimit = (EditText) v.findViewById(R.id.etDurationLimit);
+
         TextView tvMessage = (TextView) v.findViewById(R.id.tvMessage);
         tvMessage.setText("Get tweet stream from selected area?" + messageAddition);
 
@@ -635,7 +679,14 @@ public class ShowMapFragment extends Fragment {
                             makeToast("Tweet limit input is empty. Limit is set to 500.");
                             TWEET_COUNT_LIMIT = 500;
                         }
-                        getTweetsFromStream(leftBottom, rightTop, rightBottom, leftTop, distanceInKM, centerLocation, TWEET_COUNT_LIMIT);
+
+                        number = etDurationLimit.getText().toString();
+                        long duration = 0;
+                        if(!number.isEmpty()) {
+                            duration = Long.parseLong(number) * 1000l; // Multiply by 1000 to convert it to milliseconds
+                        }
+
+                        getTweetsFromStream(leftBottom, rightTop, rightBottom, leftTop, distanceInKM, centerLocation, TWEET_COUNT_LIMIT, duration);
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -676,7 +727,7 @@ public class ShowMapFragment extends Fragment {
                 tvTweetCount.setText(String.valueOf(calculateTweetCount()));
                 break;
             case R.id.menuStopStream:
-                if(fetchTweetsTask != null) fetchTweetsTask.stopStream();
+                if(fetchTweetsTask != null) fetchTweetsTask.stopStream(true);
                 break;
             case R.id.menuKeepScreenOn:
                 item.setChecked(!item.isChecked());
@@ -716,16 +767,16 @@ public class ShowMapFragment extends Fragment {
         mapView.onLowMemory();
     }
 
-    private void cancelFetchTweetsTask() {
+    private void cancelFetchTweetsTask(boolean manuallyEnded) {
         if(fetchTweetsTask != null) {
-            fetchTweetsTask.stopStream();
+            fetchTweetsTask.stopStream(manuallyEnded);
             fetchTweetsTask.cancel(true);
         }
     }
 
     @Override
     public void onDestroy() {
-        cancelFetchTweetsTask();
+        cancelFetchTweetsTask(true);
 
         super.onDestroy();
         mapView.onDestroy();

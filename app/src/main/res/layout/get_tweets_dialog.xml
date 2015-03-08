@@ -19,6 +19,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/tvMessage"
         android:orientation="horizontal"
+        android:id="@+id/llTweetLimit"
         android:layout_marginTop="8dp"
         android:layout_centerHorizontal="true">
 
@@ -38,5 +39,31 @@
             android:text="100"
             android:gravity="center_horizontal"
             android:id="@+id/etTweetCountLimit" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/llTweetLimit"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_centerHorizontal="true">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Duration Limit (sec):"
+            android:id="@+id/tvDurationLimit"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+        <EditText
+            android:layout_width="72dp"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:ems="10"
+            android:layout_marginLeft="10dp"
+            android:text="0"
+            android:gravity="center_horizontal"
+            android:id="@+id/etDurationLimit" />
     </LinearLayout>
 </RelativeLayout>

@@ -188,7 +188,7 @@ public class ProfilePhotosFragment extends Fragment {
                 url = tweets.get(position).getUser().getProfileImageURL();
             } else {
                 Status currentStatus = tweets.get(position);
-                url = currentStatus.getMediaEntities()[findOccurrencesBefore(currentStatus)].getMediaURL();
+                url = currentStatus.getExtendedMediaEntities()[findOccurrencesBefore(currentStatus, position)].getMediaURL();
             }
 
             Picasso.with(context)
@@ -200,12 +200,12 @@ public class ProfilePhotosFragment extends Fragment {
             return view;
         }
 
-        private int findOccurrencesBefore(Status tweet) {
-            int currentIndex = tweets.indexOf(tweet);
+        private int findOccurrencesBefore(Status tweet, int position) {
+            if(position == 0) return 0;
 
             int occurrences = 0;
-            for(int i = 0; i < currentIndex; i++) {
-                if(tweets.get(i).getId() == tweet.getId()) {
+            for(int i = 0; i < position; i++) {
+                if(tweets.get(i).equals(tweet)) {
                     occurrences++;
                 }
             }

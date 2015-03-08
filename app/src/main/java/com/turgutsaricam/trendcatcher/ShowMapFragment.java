@@ -116,7 +116,7 @@ public class ShowMapFragment extends Fragment {
 
             // TODO
             String snippet = "Limit: " + tweetLimit + " tweets";
-            map.addMarker(new MarkerOptions()
+            Marker marker = map.addMarker(new MarkerOptions()
                 .position(leftTop)
                 .title(tweets.size() + " tweets in " + elapsedTime)
                 .snippet(snippet)
@@ -189,7 +189,7 @@ public class ShowMapFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         v = inflater.inflate(R.layout.show_map_fragment, container, false);
-        v.setKeepScreenOn(true);
+//        v.setKeepScreenOn(true);
 
         // Get the mapview from xml layout file
         mapView = (MapView) v.findViewById(R.id.mapView);
@@ -225,7 +225,7 @@ public class ShowMapFragment extends Fragment {
         }
 
         // Updates the location and zoom of the MapView
-        cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(39.8851, 32.7819), 5f);
+        cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(39.8851, 32.7819), 4f);
         map.animateCamera(cameraUpdate);
 
         map.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {

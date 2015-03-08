@@ -38,7 +38,8 @@ public class MainActivity extends ActionBarActivity
         ShowMapFragment.CommunicatorShowMapFragment,
         DialogShowTweets.CommunicatorDialogShowTweets,
         MapUtilsView.CommunicatorMapUtilsView,
-        ProfilePhotosFragment.CommunicatorProfilePhotosFragment
+        ProfilePhotosFragment.CommunicatorProfilePhotosFragment,
+        ShowTweetsFragment.CommunicatorShowTweetsFragment
 {
 
     private NavigationDrawerFragment mNavigationDrawerFragment;
@@ -140,6 +141,10 @@ public class MainActivity extends ActionBarActivity
                 args = new Bundle();
                 args.putBoolean(ProfilePhotosFragment.LOAD_TWEET_PHOTOS, true);
                 fragment.setArguments(args);
+                break;
+            case 3:
+                fragment = new ShowTweetsFragment();
+                tag = "ShowTweetsFragment";
                 break;
         }
 

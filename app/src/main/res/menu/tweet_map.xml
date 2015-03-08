@@ -25,5 +25,5 @@
         android:title="Keep screen on"
         app:showAsAction="never"
         android:checkable="true"
-        android:checked="true"/>
+        android:checked="false"/>
 </menu>

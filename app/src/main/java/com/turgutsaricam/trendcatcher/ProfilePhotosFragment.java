@@ -1,7 +1,9 @@
 package com.turgutsaricam.trendcatcher;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -9,6 +11,9 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -36,11 +41,6 @@ public class ProfilePhotosFragment extends Fragment {
     CommunicatorProfilePhotosFragment comm;
     List<Status> allTweets;
 
-    private final String HTTP = "http://";
-    private final String HTTPS = "https://";
-    private final String TWITTER_URL = "http://twitter.com/";
-    private final String TWITTER_STATUS_BASE = "/status/";
-
     private boolean loadTweetPhotos = false;
     public static String LOAD_TWEET_PHOTOS = "loadTweetPhotos";
 
@@ -48,6 +48,12 @@ public class ProfilePhotosFragment extends Fragment {
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         comm = (CommunicatorProfilePhotosFragment) activity;
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
     }
 
     @Override
@@ -63,15 +69,15 @@ public class ProfilePhotosFragment extends Fragment {
                 Intent intent = new Intent(Intent.ACTION_VIEW);
                 String url = "";
                 if(!loadTweetPhotos) {
-                    url = TWITTER_URL + currentTweet.getUser().getScreenName();
+                    url = MyConstants.TWITTER_URL + currentTweet.getUser().getScreenName();
                 } else {
-                    url = TWITTER_URL + currentTweet.getUser().getScreenName()
-                            + TWITTER_STATUS_BASE + currentTweet.getId();
+                    url = MyConstants.TWITTER_URL + currentTweet.getUser().getScreenName()
+                            + MyConstants.TWITTER_STATUS_BASE + currentTweet.getId();
                 }
 
                 if(url != null) {
-                    if (!url.startsWith(HTTP) && !url.startsWith(HTTPS)) {
-                        url = HTTP + url;
+                    if (!url.startsWith(MyConstants.HTTP) && !url.startsWith(MyConstants.HTTPS)) {
+                        url = MyConstants.HTTP + url;
                     }
 
                     logIt("URL: " + url);
@@ -103,7 +109,7 @@ public class ProfilePhotosFragment extends Fragment {
 
     private void populateGrid() {
         List<ShowMapFragment.StreamObject> streamObjects = comm.getStreamObjects();
-        logIt("Stream count: " + streamObjects.size());
+//        logIt("Stream count: " + streamObjects.size());
 
         allTweets = new ArrayList<Status>();
 
@@ -114,9 +120,18 @@ public class ProfilePhotosFragment extends Fragment {
         } else {
             for (ShowMapFragment.StreamObject so : streamObjects) {
                 for (Status tweet : so.getTweets()) {
-                    MediaEntity[] mediaEntity = tweet.getMediaEntities();
-                    if(mediaEntity != null) {
-                        for (MediaEntity me : mediaEntity) {
+//                    MediaEntity[] mediaEntities = tweet.getMediaEntities();
+//                    if(mediaEntities != null) {
+//                        for (MediaEntity me : mediaEntities) {
+//                            if (me.getType().matches("photo")) {
+//                                allTweets.add(tweet);
+//                            }
+//                        }
+//                    }
+
+                    MediaEntity[] mediaEntities = tweet.getExtendedMediaEntities();
+                    if(mediaEntities != null) {
+                        for (MediaEntity me : mediaEntities) {
                             if (me.getType().matches("photo")) {
                                 allTweets.add(tweet);
                             }
@@ -126,9 +141,14 @@ public class ProfilePhotosFragment extends Fragment {
             }
         }
 
-        logIt("Tweet count: " + allTweets.size());
+//        logIt("Tweet count: " + allTweets.size());
+        makeToast(allTweets.size() + " photos will be loaded");
         arrayAdapter = new MyListAdapter(getActivity(), allTweets);
         gvProfilePhotos.setAdapter(arrayAdapter);
+    }
+
+    private void makeToast(String text) {
+        Toast.makeText(getActivity(), text, Toast.LENGTH_SHORT).show();
     }
 
     private class MyListAdapter extends BaseAdapter {
@@ -167,7 +187,8 @@ public class ProfilePhotosFragment extends Fragment {
             if(!loadTweetPhotos) {
                 url = tweets.get(position).getUser().getProfileImageURL();
             } else {
-                url = tweets.get(position).getMediaEntities()[0].getMediaURL();
+                Status currentStatus = tweets.get(position);
+                url = currentStatus.getMediaEntities()[findOccurrencesBefore(currentStatus)].getMediaURL();
             }
 
             Picasso.with(context)
@@ -178,6 +199,44 @@ public class ProfilePhotosFragment extends Fragment {
 
             return view;
         }
+
+        private int findOccurrencesBefore(Status tweet) {
+            int currentIndex = tweets.indexOf(tweet);
+
+            int occurrences = 0;
+            for(int i = 0; i < currentIndex; i++) {
+                if(tweets.get(i).getId() == tweet.getId()) {
+                    occurrences++;
+                }
+            }
+
+            Log.e("", "Occurrences: " + occurrences);
+            return occurrences;
+        }
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.profile_photos_fragment, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.pffInfo:
+                new AlertDialog.Builder(getActivity())
+                        .setMessage(allTweets.size() + " photos are found.")
+                        .setNeutralButton("Close", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        })
+                        .show();
+                break;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     public interface CommunicatorProfilePhotosFragment {

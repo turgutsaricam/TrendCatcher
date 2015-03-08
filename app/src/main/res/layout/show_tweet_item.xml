@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:layout_gravity="center">
+
+    <ImageView
+        android:id="@+id/ivProfileImage"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="#ccc"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"/>
+
+    <TextView
+        android:id="@+id/tvTweetName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Name"
+        android:textStyle="bold"
+        android:layout_marginLeft="10dp"
+        android:layout_toRightOf="@+id/ivProfileImage"/>
+
+    <TextView
+        android:id="@+id/tvTweetScreenName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Name"
+        android:textColor="#ff9a9a9a"
+        android:layout_marginLeft="4dp"
+        android:layout_toRightOf="@+id/tvTweetName"/>
+
+    <TextView
+        android:id="@+id/tvTweetText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Text"
+        android:textColorLink="#55ACEE"
+        android:layout_marginLeft="10dp"
+        android:layout_toRightOf="@+id/ivProfileImage"
+        android:layout_below="@+id/tvTweetName"/>
+
+</RelativeLayout>

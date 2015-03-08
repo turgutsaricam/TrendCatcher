@@ -14,4 +14,9 @@ public class MyConstants {
     public static final String CONSUMER_SECRET = "SrF0Ns9JyKT3kHm3K1Zt68iX4PqGXA8siQpw4V5NONRRyXCivT";
     public static final String ACCESS_TOKEN = "36305699-r5FpKozr9EifChYcBeOfMGyFWu7mH2iYx1cKnoenz";
     public static final String ACCESS_TOKEN_SECRET = "vLl0ZYMFp6LhBmKNqtotFjDgkcKaxFIpySBZ14IBYCuzC";
+
+    public static final String TWITTER_URL = "http://twitter.com/";
+    public static final String TWITTER_STATUS_BASE = "/status/";
+    public static final String HTTP = "http://";
+    public static final String HTTPS = "https://";
 }

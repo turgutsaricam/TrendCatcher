@@ -90,7 +90,7 @@ public class DialogShowTweets extends DialogFragment {
     private void populateList() {
         mAllStreamObjects.clear();
         mAllStreamObjects.addAll(comm.requestStreamObjects());
-        Collections.reverse(mAllStreamObjects);
+//        Collections.reverse(mAllStreamObjects);
 
         timeDifference = comm.requestTimeDifference();
 
@@ -101,6 +101,8 @@ public class DialogShowTweets extends DialogFragment {
                 tweetIds.add(status.getId());
             }
         }
+
+        Collections.reverse(tweetIds);
 
         // Set up the adapter and add tweets
         final TweetViewFetchAdapter adapter = new TweetViewFetchAdapter<CompactTweetView>(getActivity());

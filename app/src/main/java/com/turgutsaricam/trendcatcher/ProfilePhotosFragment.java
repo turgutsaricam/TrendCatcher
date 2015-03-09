@@ -39,7 +39,7 @@ public class ProfilePhotosFragment extends Fragment {
     MyListAdapter arrayAdapter;
 
     CommunicatorProfilePhotosFragment comm;
-    List<Status> allTweets;
+    List<ShowMapFragment.StatusObject> allTweets;
 
     private boolean loadTweetPhotos = false;
     public static String LOAD_TWEET_PHOTOS = "loadTweetPhotos";
@@ -64,7 +64,7 @@ public class ProfilePhotosFragment extends Fragment {
         gvProfilePhotos.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Status currentTweet = allTweets.get(position);
+                Status currentTweet = allTweets.get(position).getStatus();
 
                 Intent intent = new Intent(Intent.ACTION_VIEW);
                 String url = "";
@@ -111,15 +111,15 @@ public class ProfilePhotosFragment extends Fragment {
         List<ShowMapFragment.StreamObject> streamObjects = comm.getStreamObjects();
 //        logIt("Stream count: " + streamObjects.size());
 
-        allTweets = new ArrayList<Status>();
+        allTweets = new ArrayList<ShowMapFragment.StatusObject>();
 
         if(!loadTweetPhotos) {
             for (ShowMapFragment.StreamObject so : streamObjects) {
-                allTweets.addAll(so.getTweets());
+                allTweets.addAll(so.getStatusObjects());
             }
         } else {
             for (ShowMapFragment.StreamObject so : streamObjects) {
-                for (Status tweet : so.getTweets()) {
+                for (ShowMapFragment.StatusObject statusObject : so.getStatusObjects()) {
 //                    MediaEntity[] mediaEntities = tweet.getMediaEntities();
 //                    if(mediaEntities != null) {
 //                        for (MediaEntity me : mediaEntities) {
@@ -128,12 +128,12 @@ public class ProfilePhotosFragment extends Fragment {
 //                            }
 //                        }
 //                    }
-
+                    Status tweet = statusObject.getStatus();
                     MediaEntity[] mediaEntities = tweet.getExtendedMediaEntities();
                     if(mediaEntities != null) {
                         for (MediaEntity me : mediaEntities) {
                             if (me.getType().matches("photo")) {
-                                allTweets.add(tweet);
+                                allTweets.add(statusObject);
                             }
                         }
                     }
@@ -154,9 +154,9 @@ public class ProfilePhotosFragment extends Fragment {
     private class MyListAdapter extends BaseAdapter {
 
         Context context;
-        List<Status> tweets;
+        List<ShowMapFragment.StatusObject> tweets;
 
-        public MyListAdapter(Context context, List<Status> tweets) {
+        public MyListAdapter(Context context, List<ShowMapFragment.StatusObject> tweets) {
             this.context = context;
             this.tweets = tweets;
         }
@@ -173,7 +173,7 @@ public class ProfilePhotosFragment extends Fragment {
 
         @Override
         public long getItemId(int position) {
-            return tweets.get(position).getId();
+            return tweets.get(position).getStatus().getId();
         }
 
         @Override
@@ -185,9 +185,9 @@ public class ProfilePhotosFragment extends Fragment {
 
             String url = "";
             if(!loadTweetPhotos) {
-                url = tweets.get(position).getUser().getProfileImageURL();
+                url = tweets.get(position).getStatus().getUser().getProfileImageURL();
             } else {
-                Status currentStatus = tweets.get(position);
+                Status currentStatus = tweets.get(position).getStatus();
                 url = currentStatus.getExtendedMediaEntities()[findOccurrencesBefore(currentStatus, position)].getMediaURL();
             }
 

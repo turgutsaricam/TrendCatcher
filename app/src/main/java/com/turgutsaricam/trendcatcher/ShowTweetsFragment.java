@@ -1,6 +1,8 @@
 package com.turgutsaricam.trendcatcher;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -18,6 +20,9 @@ import android.util.Log;
 import android.util.Patterns;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -48,10 +53,10 @@ public class ShowTweetsFragment extends Fragment {
     ListView lvShowTweets;
 
     CommunicatorShowTweetsFragment comm;
-    List<Status> allTweets = new ArrayList<Status>();
-    List<Status> loadedTweets = new ArrayList<Status>();
+    List<ShowMapFragment.StatusObject> allTweets = new ArrayList<ShowMapFragment.StatusObject>();
+    List<ShowMapFragment.StatusObject> loadedTweets = new ArrayList<ShowMapFragment.StatusObject>();
 
-    GenericAdapter<Status> arrayAdapter;
+    GenericAdapter<ShowMapFragment.StatusObject> arrayAdapter;
 
     private final int TWEET_PER_PAGE = 50;
 
@@ -59,6 +64,12 @@ public class ShowTweetsFragment extends Fragment {
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         comm = (CommunicatorShowTweetsFragment) activity;
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
     }
 
     @Override
@@ -78,7 +89,7 @@ public class ShowTweetsFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent intent = new Intent(Intent.ACTION_VIEW);
-                Status currentTweet = loadedTweets.get(position);
+                Status currentTweet = loadedTweets.get(position).getStatus();
                 String url = MyConstants.TWITTER_URL + currentTweet.getUser().getScreenName()
                         + MyConstants.TWITTER_STATUS_BASE + currentTweet.getId();
 
@@ -109,21 +120,27 @@ public class ShowTweetsFragment extends Fragment {
         loadTweets();
     }
 
+    List<ShowMapFragment.StreamObject> allStreamObjects;
     private void loadTweets() {
-        List<ShowMapFragment.StreamObject> allStreamObjects = comm.requestStreamObjects();
+        allStreamObjects = comm.requestStreamObjects();
         Log.e("", "allStreamObjects size is " + allStreamObjects.size());
         for(ShowMapFragment.StreamObject so : allStreamObjects) {
-            allTweets.addAll(so.getTweets());
+            allTweets.addAll(so.getStatusObjects());
+        }
+
+        if(allTweets.size() == 0) {
+            lvShowTweets.setVisibility(View.GONE);
+            return;
         }
 
         // Reverse the list in order to load tweets so that earliest posted one is at the top
         Collections.reverse(allTweets);
 
         final int count = TWEET_PER_PAGE >= allTweets.size() ? allTweets.size() : TWEET_PER_PAGE;
-        final List<Status> subList = allTweets.subList(0, count);
+        final List<ShowMapFragment.StatusObject> subList = allTweets.subList(0, count);
         loadedTweets.addAll(subList);
 
-        arrayAdapter = new GenericAdapter<Status>(getActivity(), loadedTweets) {
+        arrayAdapter = new GenericAdapter<ShowMapFragment.StatusObject>(getActivity(), loadedTweets) {
             @Override
             public View getDataRow(int position, View convertView, ViewGroup parent) {
                 ViewHolder holder;
@@ -143,14 +160,14 @@ public class ShowTweetsFragment extends Fragment {
                     holder = (ViewHolder) convertView.getTag();
                 }
 
-                Status status = loadedTweets.get(position);
+                Status status = loadedTweets.get(position).getStatus();
 
                 holder.tvText.setText(getColoredTweet(status.getText()));
 
                 holder.tvName.setText(status.getUser().getName());
                 holder.tvScreenName.setText("@" + status.getUser().getScreenName());
 
-                String url = loadedTweets.get(position).getUser().getProfileImageURL();
+                String url = loadedTweets.get(position).getStatus().getUser().getProfileImageURL();
                 Picasso.with(getActivity())
                         .load(url)
                         .fit()
@@ -172,7 +189,7 @@ public class ShowTweetsFragment extends Fragment {
         endIndex = endIndex >= allTweets.size() ? allTweets.size() : endIndex;
 
         if(startIndex != endIndex) {
-            List<Status> subList = allTweets.subList(startIndex, endIndex);
+            List<ShowMapFragment.StatusObject> subList = allTweets.subList(startIndex, endIndex);
             loadedTweets.addAll(subList);
             arrayAdapter.notifyDataSetChanged();
         }
@@ -344,6 +361,43 @@ public class ShowTweetsFragment extends Fragment {
             return row;
         }
 
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.show_tweets_fragment, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.stfInfo:
+                String message = "";
+                if(allTweets.size() > 1) {
+                    message += allTweets.size() + " tweets are found from ";
+                } else {
+                    message += allTweets.size() + " tweet is found from ";
+                }
+
+                if(allStreamObjects.size() > 1) {
+                    message += allStreamObjects.size() + " streams.";
+                } else {
+                    message += allStreamObjects.size() + " stream.";
+                }
+
+                new AlertDialog.Builder(getActivity())
+                        .setMessage(message)
+                        .setNeutralButton("Close", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        })
+                        .show();
+                break;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     public interface CommunicatorShowTweetsFragment {

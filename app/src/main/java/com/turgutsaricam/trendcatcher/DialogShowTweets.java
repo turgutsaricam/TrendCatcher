@@ -11,6 +11,7 @@ import android.support.v4.app.DialogFragment;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.twitter.sdk.android.core.TwitterException;
@@ -32,6 +33,7 @@ public class DialogShowTweets extends DialogFragment {
 
     View v;
     ListView mListView;
+    ProgressBar pBar;
 
     CommunicatorDialogShowTweets comm;
     List<ShowMapFragment.StreamObject> mAllStreamObjects = new ArrayList<ShowMapFragment.StreamObject>();
@@ -48,6 +50,8 @@ public class DialogShowTweets extends DialogFragment {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         View v = getActivity().getLayoutInflater().inflate(R.layout.show_tweets_fragment, null);
         mListView = (ListView) v.findViewById(R.id.lvShowTweets);
+        pBar = (ProgressBar) v.findViewById(R.id.stfProgressBar);
+        pBar.setVisibility(View.VISIBLE);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setView(v)
@@ -88,6 +92,7 @@ public class DialogShowTweets extends DialogFragment {
     }
 
     private void populateList() {
+        pBar.setVisibility(View.VISIBLE);
         mAllStreamObjects.clear();
         mAllStreamObjects.addAll(comm.requestStreamObjects());
 //        Collections.reverse(mAllStreamObjects);
@@ -97,8 +102,8 @@ public class DialogShowTweets extends DialogFragment {
         // Get tweet ids
         List<Long> tweetIds = new ArrayList<Long>();
         for(ShowMapFragment.StreamObject so : mAllStreamObjects) {
-            for (Status status : so.getTweets()) {
-                tweetIds.add(status.getId());
+            for (ShowMapFragment.StatusObject status : so.getStatusObjects()) {
+                tweetIds.add(status.getTweetId());
             }
         }
 
@@ -115,11 +120,13 @@ public class DialogShowTweets extends DialogFragment {
         adapter.setTweetIds(subList, new LoadCallback<List<Tweet>>() {
             @Override
             public void success(List<Tweet> tweets) {
+                pBar.setVisibility(View.GONE);
+
                 Button neutralButton = dialog.getButton(Dialog.BUTTON_NEUTRAL);
                 String s = count > 1 ? "s" : "";
                 int totalTweetCount = 0;
                 for(ShowMapFragment.StreamObject so : mAllStreamObjects) {
-                    totalTweetCount += so.getTweets().size();
+                    totalTweetCount += so.getStatusObjects().size();
                 }
                 neutralButton.setText("OK (Last " + count + "/" + totalTweetCount + " tweet" + s + " - " + timeDifference + ")");
             }

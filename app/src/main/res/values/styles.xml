@@ -25,7 +25,7 @@
         <item name="windowActionBar">false</item>
     </style>
 
-    <color name="ThemeBackground">#ffFAFAFA</color>
+    <color name="ThemeBackground">#ffFFFFFF</color>
     <color name="colorPrimary">#8BC34A</color>
     <color name="colorPrimaryDark">#689F38</color>
     <color name="colorNavDrawerListSelector">#EEEEEE</color>

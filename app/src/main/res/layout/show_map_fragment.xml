@@ -28,6 +28,16 @@
                 android:padding="3dp"
                 android:textColor="#FFFFFFFF"
                 />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/tvDurationLimit"
+                android:textColor="#FFFFFFFF"
+                android:paddingRight="3dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
+                android:visibility="gone"
+                android:background="#32000000"/>
 
             <TextView
                 android:layout_width="wrap_content"

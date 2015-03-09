@@ -205,7 +205,7 @@ public class ProfilePhotosFragment extends Fragment {
 
             int occurrences = 0;
             for(int i = 0; i < position; i++) {
-                if(tweets.get(i).equals(tweet)) {
+                if(tweets.get(i).getStatus().equals(tweet)) {
                     occurrences++;
                 }
             }

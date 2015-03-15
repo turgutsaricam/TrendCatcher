@@ -2,6 +2,7 @@ package com.turgutsaricam.trendcatcher;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.widget.DrawerLayout;
@@ -22,6 +23,10 @@ import com.twitter.sdk.android.core.TwitterException;
 import com.twitter.sdk.android.core.TwitterSession;
 import com.twitter.sdk.android.core.identity.TwitterLoginButton;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -93,6 +98,10 @@ public class MainActivity extends ActionBarActivity
 
         setVisibilities(true);
 
+        // Open the database
+        DBAdapter dbAdapter = new DBAdapter(this);
+        dbAdapter.open();
+
     }
 
     private void setVisibilities(boolean loggedIn) {
@@ -145,6 +154,12 @@ public class MainActivity extends ActionBarActivity
             case 3:
                 fragment = new ShowTweetsFragment();
                 tag = "ShowTweetsFragment";
+                break;
+            case 4:
+                importDatabase();
+                break;
+            case 5:
+                exportDatabase();
                 break;
         }
 
@@ -276,6 +291,104 @@ public class MainActivity extends ActionBarActivity
 
         if(fragment != null) {
             fragment.getScreenCoords(leftBottomX, leftBottomY, rightTopX, rightTopY);
+        }
+    }
+
+    @SuppressWarnings("resource")
+    private void importDatabase() {
+
+        // importing database
+        try {
+            File sd = Environment.getExternalStorageDirectory();
+            File data = Environment.getDataDirectory();
+            String trendCatcher = "TrendCatcher";
+            // File directory = new File(sd + File.separator + nutStats);
+            // if (!directory.isDirectory()) {
+            // directory.mkdirs();
+            // }
+
+            if (sd.canWrite()) {
+                String currentDBPath = "//data//com.turgutsaricam.trendcatcher//databases//"
+                        + DBAdapter.DATABASE_NAME;
+                String backupDBPath = trendCatcher + File.separator
+                        + DBAdapter.DATABASE_NAME;
+                File backupDB = new File(data, currentDBPath);
+                File currentDB = new File(sd, backupDBPath);
+
+                if (currentDB.exists()) {
+                    FileChannel src = new FileInputStream(currentDB)
+                            .getChannel();
+                    FileChannel dst = new FileOutputStream(backupDB)
+                            .getChannel();
+                    dst.transferFrom(src, 0, src.size());
+                    src.close();
+                    dst.close();
+                    Toast.makeText(
+                            this,
+                            DBAdapter.DATABASE_NAME + " has been imported.",
+                            Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "Backup does not exist.",
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        } catch (Exception e) {
+//			Log.e("Import Database: ", e.toString());
+        }
+    }
+
+    @SuppressWarnings("resource")
+    private void exportDatabase() {
+
+        try {
+            File sd = Environment.getExternalStorageDirectory();
+            File data = Environment.getDataDirectory();
+            String trendCatcher = "TrendCatcher";
+            File directory = new File(sd + File.separator + trendCatcher);
+            File directorySharedPrefs = new File(sd + File.separator
+                    + trendCatcher + File.separator + "Preferences");
+            if (!directory.isDirectory()) {
+                directory.mkdirs();
+            }
+            if (!directorySharedPrefs.isDirectory()) {
+                directorySharedPrefs.mkdirs();
+            }
+
+            if (sd.canWrite()) {
+                // SimpleDateFormat df = new SimpleDateFormat(
+                // "yyyyMMdd_HHmmss", java.util.Locale.getDefault());
+                // String date =
+                // df.format(Calendar.getInstance().getTime());
+                String currentDBPath = "//data//com.turgutsaricam.trendcatcher//databases//"
+                        + DBAdapter.DATABASE_NAME;
+                String backupDBPath = trendCatcher + File.separator
+                        + DBAdapter.DATABASE_NAME;
+
+                File currentDB = new File(data, currentDBPath);
+                File backupDB = new File(sd, backupDBPath);
+
+
+                if (currentDB.exists()) {
+                    FileChannel src = new FileInputStream(currentDB)
+                            .getChannel();
+
+                    FileChannel dst = new FileOutputStream(backupDB)
+                            .getChannel();
+
+                    dst.transferFrom(src, 0, src.size());
+
+                    src.close();
+                    dst.close();
+                    Toast.makeText(
+                            this,
+                            DBAdapter.DATABASE_NAME
+                                    + " has been exported.",
+                            Toast.LENGTH_LONG).show();
+                }
+
+            }
+        } catch (Exception e) {
+//			Log.e("Export Database: ", e.toString());
         }
     }
 

@@ -2,6 +2,7 @@ package com.turgutsaricam.trendcatcher;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.Point;
@@ -46,11 +47,14 @@ import com.twitter.sdk.android.tweetui.TweetView;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import twitter4j.FilterQuery;
 import twitter4j.GeoLocation;
@@ -65,6 +69,7 @@ import twitter4j.TwitterException;
 import twitter4j.TwitterFactory;
 import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
+import twitter4j.User;
 import twitter4j.conf.ConfigurationBuilder;
 
 
@@ -180,6 +185,7 @@ public class ShowMapFragment extends Fragment {
         public String getElapsedTime() { return elapsedTime; }
         public long getDurationLimit() { return durationLimit; }
         public InfoMarker getInfoMarker() { return infoMarker; }
+        public boolean getManuallyEnded() { return manuallyEnded; }
 
         private String getTimeAsDate(boolean isDurationLimit) {
             long millisDiff;
@@ -701,6 +707,9 @@ public class ShowMapFragment extends Fragment {
                 // Set current stream count and duration limit text view insivible
                 tvCurrentStreamTweetCount.setVisibility(View.GONE);
                 tvDurationLimit.setVisibility(View.GONE);
+
+                // Insert to database
+                new WriteToDatabaseTask(getActivity(), streamObject).execute();
             }
         }
 
@@ -708,6 +717,133 @@ public class ShowMapFragment extends Fragment {
             return ts != null;
         }
 
+    }
+
+    private class WriteToDatabaseTask extends AsyncTask<Void, Void, Void> {
+
+        StreamObject streamObject = null;
+        Context context;
+
+        protected WriteToDatabaseTask(Context context, StreamObject so) {
+            streamObject = so;
+            this.context = context;
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            if(streamObject != null) {
+                DBAdapterStreamSession myTableStreamSession = new DBAdapterStreamSession(context);
+                DBAdapterTweet myTableTweet = new DBAdapterTweet(context);
+                DBAdapterTwitterUser myTableTwitterUser = new DBAdapterTwitterUser(context);
+
+                myTableStreamSession.open();
+                myTableTweet.open();
+                myTableTwitterUser.open();
+
+                List<StatusObject> statuses = streamObject.getStatusObjects();
+                HashSet<Long> userIds = new HashSet<Long>();
+
+                long sessionId = myTableStreamSession.insertRow(
+                        statuses.size(),
+                        0,
+                        !streamObject.getManuallyEnded() ? 1 : 0,
+                        streamObject.getTweetLimit(),
+                        streamObject.getDurationLimit(),
+                        streamObject.leftTop,
+                        streamObject.rightTop,
+                        streamObject.rightBottom,
+                        streamObject.leftBottom,
+                        streamObject.getStartEpoch(),
+                        streamObject.getEndEpoch(),
+                        0);
+
+                User userHolder = null;
+                twitter4j.Status statusHolder = null;
+
+                if(sessionId != -1) {
+                    for (StatusObject so : statuses) {
+                        statusHolder = so.getStatus();
+                        userHolder = statusHolder.getUser();
+
+                        if (!myTableTwitterUser.isUserAlreadyAdded(userHolder.getId())) {
+
+                            // Insert twitter user
+                            myTableTwitterUser.insertRow(
+                                    userHolder.getId(),
+                                    userHolder.getScreenName(),
+                                    userHolder.getName(),
+                                    userHolder.getDescription(),
+                                    userHolder.getLang(),
+                                    userHolder.getProfileLinkColor(),
+                                    userHolder.getCreatedAt().getTime(),
+                                    userHolder.isVerified() ? 1 : 0,
+                                    userHolder.getStatusesCount(),
+                                    userHolder.getFollowersCount(),
+                                    userHolder.getFavouritesCount(),
+                                    userHolder.getFriendsCount(),
+                                    userHolder.getLocation(),
+                                    userHolder.getTimeZone(),
+                                    userHolder.getUtcOffset(),
+                                    userHolder.isGeoEnabled() ? 1 : 0,
+                                    Calendar.getInstance().getTimeInMillis()
+                            );
+
+                        } else {
+                            // Update twitter user
+                            myTableTwitterUser.updateRow(
+                                    userHolder.getId(),
+                                    userHolder.getScreenName(),
+                                    userHolder.getName(),
+                                    userHolder.getDescription(),
+                                    userHolder.getLang(),
+                                    userHolder.getProfileLinkColor(),
+                                    userHolder.getCreatedAt().getTime(),
+                                    userHolder.isVerified() ? 1 : 0,
+                                    userHolder.getStatusesCount(),
+                                    userHolder.getFollowersCount(),
+                                    userHolder.getFavouritesCount(),
+                                    userHolder.getFriendsCount(),
+                                    userHolder.getLocation(),
+                                    userHolder.getTimeZone(),
+                                    userHolder.getUtcOffset(),
+                                    userHolder.isGeoEnabled() ? 1 : 0,
+                                    Calendar.getInstance().getTimeInMillis()
+                            );
+
+                        }
+
+                        userIds.add(userHolder.getId());
+
+                        // Insert tweet to db
+                        myTableTweet.insertRow(
+                                sessionId,
+                                userHolder.getId(),
+                                statusHolder.getId(),
+                                statusHolder.getText(),
+                                statusHolder.getCreatedAt().getTime(),
+                                statusHolder.getLang(),
+                                statusHolder.getRetweetCount(),
+                                statusHolder.getInReplyToScreenName(),
+                                statusHolder.getInReplyToStatusId(),
+                                statusHolder.getInReplyToUserId(),
+                                statusHolder.getPlace().getId(),
+                                statusHolder.getExtendedMediaEntities().length,
+                                statusHolder.isPossiblySensitive() ? 1 : 0
+                        );
+                    }
+
+                    // Update user count
+                    myTableStreamSession.updateUserCount(sessionId, userIds.size());
+
+                }
+
+                myTableStreamSession.close();
+                myTableTweet.close();
+                myTableTwitterUser.close();
+            }
+
+            return null;
+        }
     }
 
     public boolean isTweetInBoundaries(twitter4j.Status status, LatLng leftTop, LatLng rightBottom) {

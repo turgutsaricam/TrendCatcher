@@ -324,14 +324,18 @@ public class NavigationDrawerFragment extends Fragment {
             "Map",
             "Profile Photos",
             "Tweet Photos",
-            "Show Tweets"
+            "Show Tweets",
+            "Import DB",
+            "Export DB"
     };
 
     final int[] itemIcons = new int[] {
             R.drawable.ic_drawer_room,
             R.drawable.ic_image,
             R.drawable.ic_image,
-            R.drawable.ic_chat
+            R.drawable.ic_chat,
+            0,
+            0
     };
 
     private void populateLists() {

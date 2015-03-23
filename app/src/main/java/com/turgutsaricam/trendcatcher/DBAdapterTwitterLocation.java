@@ -1,8 +1,11 @@
 package com.turgutsaricam.trendcatcher;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 /**
  * Created by Turgut on 07.03.2015.
@@ -79,4 +82,27 @@ public class DBAdapterTwitterLocation {
     }
 
     /* METHODS START HERE */
+
+    public long insertRow(String location_id, String name, double latitude, double longitude, String country,
+                          String country_code, String full_name, String street_address, String place_type) {
+        ContentValues cv = new ContentValues();
+        cv.put(KEY_LOCATION_ID, location_id);
+        cv.put(KEY_NAME, name);
+        cv.put(KEY_LATITUDE, latitude);
+        cv.put(KEY_LONGITUDE, longitude);
+        cv.put(KEY_COUNTRY, country);
+        cv.put(KEY_COUNTRY_CODE, country_code);
+        cv.put(KEY_FULL_NAME, full_name);
+        cv.put(KEY_STREET_ADDRESS, street_address);
+        cv.put(KEY_PLACE_TYPE, place_type);
+
+        return mDB.insert(DATABASE_TABLE, null, cv);
+    }
+
+    public boolean isLocationAdded(String locationId) {
+        String where = KEY_LOCATION_ID + "='" + locationId + "'";
+        Cursor c = mDB.query(true, DATABASE_TABLE, new String[] { KEY_LOCATION_ID }, where, null, null, null, null, null);
+
+        return c.getCount() != 0;
+    }
 }

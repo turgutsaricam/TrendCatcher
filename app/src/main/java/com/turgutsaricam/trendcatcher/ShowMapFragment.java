@@ -58,6 +58,9 @@ import java.util.Set;
 
 import twitter4j.FilterQuery;
 import twitter4j.GeoLocation;
+import twitter4j.HashtagEntity;
+import twitter4j.MediaEntity;
+import twitter4j.Place;
 import twitter4j.Query;
 import twitter4j.QueryResult;
 import twitter4j.StallWarning;
@@ -69,7 +72,9 @@ import twitter4j.TwitterException;
 import twitter4j.TwitterFactory;
 import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
+import twitter4j.URLEntity;
 import twitter4j.User;
+import twitter4j.UserMentionEntity;
 import twitter4j.conf.ConfigurationBuilder;
 
 
@@ -735,10 +740,14 @@ public class ShowMapFragment extends Fragment {
                 DBAdapterStreamSession myTableStreamSession = new DBAdapterStreamSession(context);
                 DBAdapterTweet myTableTweet = new DBAdapterTweet(context);
                 DBAdapterTwitterUser myTableTwitterUser = new DBAdapterTwitterUser(context);
+                DBAdapterTweetMedia myTableTweetMedia = new DBAdapterTweetMedia(context);
+                DBAdapterTwitterLocation myTableTwitterLocation = new DBAdapterTwitterLocation(context);
 
                 myTableStreamSession.open();
                 myTableTweet.open();
                 myTableTwitterUser.open();
+                myTableTweetMedia.open();
+                myTableTwitterLocation.open();
 
                 List<StatusObject> statuses = streamObject.getStatusObjects();
                 HashSet<Long> userIds = new HashSet<Long>();
@@ -759,17 +768,22 @@ public class ShowMapFragment extends Fragment {
 
                 User userHolder = null;
                 twitter4j.Status statusHolder = null;
+                long userId = 0;
+                long tweetId = 0;
 
                 if(sessionId != -1) {
                     for (StatusObject so : statuses) {
                         statusHolder = so.getStatus();
                         userHolder = statusHolder.getUser();
 
-                        if (!myTableTwitterUser.isUserAlreadyAdded(userHolder.getId())) {
+                        userId = userHolder.getId();
+                        tweetId = statusHolder.getId();
 
+                        // Insert or update the user
+                        if (!myTableTwitterUser.isUserAlreadyAdded(userHolder.getId())) {
                             // Insert twitter user
                             myTableTwitterUser.insertRow(
-                                    userHolder.getId(),
+                                    userId,
                                     userHolder.getScreenName(),
                                     userHolder.getName(),
                                     userHolder.getDescription(),
@@ -791,7 +805,7 @@ public class ShowMapFragment extends Fragment {
                         } else {
                             // Update twitter user
                             myTableTwitterUser.updateRow(
-                                    userHolder.getId(),
+                                    userId,
                                     userHolder.getScreenName(),
                                     userHolder.getName(),
                                     userHolder.getDescription(),
@@ -814,11 +828,16 @@ public class ShowMapFragment extends Fragment {
 
                         userIds.add(userHolder.getId());
 
+                        Log.e("", "myTableTweet is null:" + (myTableTweet == null));
+                        Log.e("", "sessionId: " + sessionId);
+                        Log.e("", "userId: " + userId);
+                        Log.e("", "tweetId: " + tweetId);
+
                         // Insert tweet to db
                         myTableTweet.insertRow(
                                 sessionId,
-                                userHolder.getId(),
-                                statusHolder.getId(),
+                                userId,
+                                tweetId,
                                 statusHolder.getText(),
                                 statusHolder.getCreatedAt().getTime(),
                                 statusHolder.getLang(),
@@ -830,6 +849,82 @@ public class ShowMapFragment extends Fragment {
                                 statusHolder.getExtendedMediaEntities().length,
                                 statusHolder.isPossiblySensitive() ? 1 : 0
                         );
+
+                        Log.e("", "myTableTwitterLocation is null:" + (myTableTwitterLocation == null));
+
+                        // Insert location to db
+                        Place place = statusHolder.getPlace();
+                        if(place != null) {
+                            GeoLocation[][] geoLocation = place.getBoundingBoxCoordinates();
+                            myTableTwitterLocation.insertRow(
+                                    place.getId(),
+                                    place.getName(),
+                                    geoLocation == null ? 0 : geoLocation[0][0].getLatitude(),
+                                    geoLocation == null ? 0 : geoLocation[0][0].getLongitude(),
+                                    place.getCountry(),
+                                    place.getCountryCode(),
+                                    place.getFullName(),
+                                    place.getStreetAddress(),
+                                    place.getPlaceType()
+                            );
+                        }
+
+                        // Insert tweet media to db
+                        // Insert mentions
+                        UserMentionEntity[] mentions = statusHolder.getUserMentionEntities();
+                        if(mentions != null) {
+                            for(UserMentionEntity ume : mentions) {
+                                myTableTweetMedia.insertRow(
+                                        userId,
+                                        tweetId,
+                                        DBAdapterTweetMedia.TYPE_MENTION,
+                                        ume.getScreenName(),
+                                        sessionId
+                                );
+                            }
+                        }
+
+                        // Insert urls
+                        URLEntity[] urls = statusHolder.getURLEntities();
+                        if(urls != null) {
+                            for(URLEntity un : urls) {
+                                myTableTweetMedia.insertRow(
+                                        userId,
+                                        tweetId,
+                                        DBAdapterTweetMedia.TYPE_URL,
+                                        un.getURL(),
+                                        sessionId
+                                );
+                            }
+                        }
+
+                        // Insert hastags
+                        HashtagEntity[] hashtags = statusHolder.getHashtagEntities();
+                        if(hashtags != null) {
+                            for(HashtagEntity he : hashtags) {
+                                myTableTweetMedia.insertRow(
+                                        userId,
+                                        tweetId,
+                                        DBAdapterTweetMedia.TYPE_HASHTAG,
+                                        he.getText(),
+                                        sessionId
+                                );
+                            }
+                        }
+
+                        // Insert media
+                        MediaEntity[] media = statusHolder.getExtendedMediaEntities();
+                        if(media != null) {
+                            for(MediaEntity me : media) {
+                                myTableTweetMedia.insertRow(
+                                        userId,
+                                        tweetId,
+                                        DBAdapterTweetMedia.TYPE_MEDIA,
+                                        me.getMediaURL(),
+                                        sessionId
+                                );
+                            }
+                        }
                     }
 
                     // Update user count
@@ -840,6 +935,8 @@ public class ShowMapFragment extends Fragment {
                 myTableStreamSession.close();
                 myTableTweet.close();
                 myTableTwitterUser.close();
+                myTableTweetMedia.close();
+                myTableTwitterLocation.close();
             }
 
             return null;

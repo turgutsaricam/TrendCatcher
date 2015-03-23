@@ -83,7 +83,7 @@ public class DBAdapter {
     private static final String CREATE_TABLE_TWITTER_LOCATION =
             "create table " + DBAdapterTwitterLocation.DATABASE_TABLE + " ("
                     + DBAdapterTwitterLocation.KEY_ROWID +                      " integer primary key autoincrement, "
-                    + DBAdapterTwitterLocation.KEY_LOCATION_ID +                " text not null, "
+                    + DBAdapterTwitterLocation.KEY_LOCATION_ID +                " text not null unique, "
                     + DBAdapterTwitterLocation.KEY_NAME +                       " text, "
                     + DBAdapterTwitterLocation.KEY_LATITUDE +                   " real, "
                     + DBAdapterTwitterLocation.KEY_LONGITUDE +                  " real, "
@@ -100,7 +100,8 @@ public class DBAdapter {
                     + DBAdapterTweetMedia.KEY_USER_ID +                       " integer, "
                     + DBAdapterTweetMedia.KEY_TWEET_ID +                      " integer, "
                     + DBAdapterTweetMedia.KEY_TYPE +                          " text, "
-                    + DBAdapterTweetMedia.KEY_CONTENT +                       " text "
+                    + DBAdapterTweetMedia.KEY_CONTENT +                       " text, "
+                    + DBAdapterTweetMedia.KEY_SESSION_ID +                    " integer "
             + ");";
 
     private Context context;

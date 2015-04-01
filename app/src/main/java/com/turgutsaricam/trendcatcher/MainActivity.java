@@ -156,9 +156,13 @@ public class MainActivity extends ActionBarActivity
                 tag = "ShowTweetsFragment";
                 break;
             case 4:
-                importDatabase();
+                fragment = new ShowStreamsFragment();
+                tag = "ShowStreamsFragment";
                 break;
             case 5:
+                importDatabase();
+                break;
+            case 6:
                 exportDatabase();
                 break;
         }
@@ -185,7 +189,7 @@ public class MainActivity extends ActionBarActivity
 
     public void restoreActionBar() {
         ActionBar actionBar = getSupportActionBar();
-        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
+//        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
         actionBar.setDisplayShowTitleEnabled(true);
         actionBar.setTitle(mTitle);
     }

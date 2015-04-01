@@ -325,6 +325,7 @@ public class NavigationDrawerFragment extends Fragment {
             "Profile Photos",
             "Tweet Photos",
             "Show Tweets",
+            "Show Streams",
             "Import DB",
             "Export DB"
     };
@@ -334,6 +335,7 @@ public class NavigationDrawerFragment extends Fragment {
             R.drawable.ic_image,
             R.drawable.ic_image,
             R.drawable.ic_chat,
+            0,
             0,
             0
     };

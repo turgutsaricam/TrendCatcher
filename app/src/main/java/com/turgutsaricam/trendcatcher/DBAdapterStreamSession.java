@@ -160,4 +160,12 @@ public class DBAdapterStreamSession {
 
         return mDB.update(DATABASE_TABLE, cv, where, null) != 0;
     }
+
+    public Cursor getAll() {
+        String where = null;
+        Cursor c = mDB.query(true, DATABASE_TABLE, ALL_KEYS, where, null, null, null, null, null);
+        if(c != null) c.moveToFirst();
+
+        return c;
+    }
 }

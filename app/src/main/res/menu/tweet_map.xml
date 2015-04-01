@@ -26,4 +26,8 @@
         app:showAsAction="never"
         android:checkable="true"
         android:checked="false"/>
+    <item
+        android:id="@+id/menuPredefinedArea"
+        android:title="Start Predefined Stream"
+        app:showAsAction="never"/>
 </menu>

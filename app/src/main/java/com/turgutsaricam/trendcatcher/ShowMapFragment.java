@@ -27,6 +27,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -79,6 +80,12 @@ import twitter4j.conf.ConfigurationBuilder;
 
 
 public class ShowMapFragment extends Fragment {
+    DBAdapterStreamSession myTableStreamSession;
+    DBAdapterTweet myTableTweet;
+    DBAdapterTwitterUser myTableTwitterUser;
+    DBAdapterTweetMedia myTableTweetMedia;
+    DBAdapterTwitterLocation myTableTwitterLocation;
+
     View v;
 
     MapView mapView;
@@ -304,6 +311,18 @@ public class ShowMapFragment extends Fragment {
         setHasOptionsMenu(true);
 
         df = new DecimalFormat("#0.0");
+
+        myTableStreamSession = new DBAdapterStreamSession(getActivity());
+        myTableTweet = new DBAdapterTweet(getActivity());
+        myTableTwitterUser = new DBAdapterTwitterUser(getActivity());
+        myTableTweetMedia = new DBAdapterTweetMedia(getActivity());
+        myTableTwitterLocation = new DBAdapterTwitterLocation(getActivity());
+
+        myTableStreamSession.open();
+        myTableTweet.open();
+        myTableTwitterUser.open();
+        myTableTweetMedia.open();
+        myTableTwitterLocation.open();
     }
 
     @Override
@@ -728,6 +747,7 @@ public class ShowMapFragment extends Fragment {
 
         StreamObject streamObject = null;
         Context context;
+        MaterialDialog progressBar;
 
         protected WriteToDatabaseTask(Context context, StreamObject so) {
             streamObject = so;
@@ -735,20 +755,18 @@ public class ShowMapFragment extends Fragment {
         }
 
         @Override
+        protected void onPreExecute() {
+            if(streamObject != null) {
+                progressBar = new MaterialDialog.Builder(context)
+                        .progress(false, streamObject.getStatusObjects().size(), true)
+                        .cancelable(false)
+                        .show();
+            }
+        }
+
+        @Override
         protected Void doInBackground(Void... params) {
             if(streamObject != null) {
-                DBAdapterStreamSession myTableStreamSession = new DBAdapterStreamSession(context);
-                DBAdapterTweet myTableTweet = new DBAdapterTweet(context);
-                DBAdapterTwitterUser myTableTwitterUser = new DBAdapterTwitterUser(context);
-                DBAdapterTweetMedia myTableTweetMedia = new DBAdapterTweetMedia(context);
-                DBAdapterTwitterLocation myTableTwitterLocation = new DBAdapterTwitterLocation(context);
-
-                myTableStreamSession.open();
-                myTableTweet.open();
-                myTableTwitterUser.open();
-                myTableTweetMedia.open();
-                myTableTwitterLocation.open();
-
                 List<StatusObject> statuses = streamObject.getStatusObjects();
                 HashSet<Long> userIds = new HashSet<Long>();
 
@@ -832,6 +850,12 @@ public class ShowMapFragment extends Fragment {
                         Log.e("", "sessionId: " + sessionId);
                         Log.e("", "userId: " + userId);
                         Log.e("", "tweetId: " + tweetId);
+                        Log.e("", "statusHolder.getText():" + (statusHolder.getText() == null));
+                        Log.e("", "statusHolder.getCreatedAt():" + (statusHolder.getCreatedAt() == null));
+                        Log.e("", "statusHolder.getLang():" + (statusHolder.getLang() == null));
+                        Log.e("", "statusHolder.getInReplyToScreenName():" + (statusHolder.getInReplyToScreenName() == null));
+                        Log.e("", "statusHolder.getPlace():" + (statusHolder.getPlace() == null));
+                        Log.e("", "statusHolder.getExtendedMediaEntities():" + (statusHolder.getExtendedMediaEntities() == null));
 
                         // Insert tweet to db
                         myTableTweet.insertRow(
@@ -845,7 +869,7 @@ public class ShowMapFragment extends Fragment {
                                 statusHolder.getInReplyToScreenName(),
                                 statusHolder.getInReplyToStatusId(),
                                 statusHolder.getInReplyToUserId(),
-                                statusHolder.getPlace().getId(),
+                                statusHolder.getPlace() == null ? null : statusHolder.getPlace().getId(),
                                 statusHolder.getExtendedMediaEntities().length,
                                 statusHolder.isPossiblySensitive() ? 1 : 0
                         );
@@ -925,6 +949,8 @@ public class ShowMapFragment extends Fragment {
                                 );
                             }
                         }
+
+                        publishProgress();
                     }
 
                     // Update user count
@@ -932,14 +958,19 @@ public class ShowMapFragment extends Fragment {
 
                 }
 
-                myTableStreamSession.close();
-                myTableTweet.close();
-                myTableTwitterUser.close();
-                myTableTweetMedia.close();
-                myTableTwitterLocation.close();
             }
 
             return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+            if(progressBar != null) progressBar.incrementProgress(1);
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            if(progressBar != null) progressBar.dismiss();
         }
     }
 
@@ -1015,6 +1046,78 @@ public class ShowMapFragment extends Fragment {
         // Find the center geolocation of the selected area
         float centerX = (leftBottomX + rightTopX) / 2;
         float centerY = (leftBottomY + rightTopY) / 2;
+
+        final LatLng centerLocation = map.getProjection().fromScreenLocation(new Point((int) centerX, (int) centerY));
+        logIt("Center Location: " + centerLocation.toString());
+
+        // Show a dialog to the user for confirmation and tweet limit arrangement
+        String messageAddition = "";
+        if(fetchTweetsTask != null && fetchTweetsTask.isStreamActive()) {
+            messageAddition = " Current stream will be cancelled.";
+        }
+
+        View v = getActivity().getLayoutInflater().inflate(R.layout.get_tweets_dialog, null);
+        etTweetLimit = (EditText) v.findViewById(R.id.etTweetCountLimit);
+        etTweetLimit.setText(String.valueOf(TWEET_COUNT_LIMIT));
+
+        final EditText etDurationLimit = (EditText) v.findViewById(R.id.etDurationLimit);
+
+        TextView tvMessage = (TextView) v.findViewById(R.id.tvMessage);
+        tvMessage.setText("Get tweet stream from selected area?" + messageAddition);
+
+        new AlertDialog.Builder(getActivity())
+                .setView(v)
+                .setPositiveButton("Get Tweets", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String number = etTweetLimit.getText().toString();
+                        if(!number.isEmpty()) {
+                            TWEET_COUNT_LIMIT = Integer.parseInt(number);
+                        } else {
+                            makeToast("Tweet limit input is empty. Limit is set to 500.");
+                            TWEET_COUNT_LIMIT = 500;
+                        }
+
+                        number = etDurationLimit.getText().toString();
+                        long duration = 0;
+                        if(!number.isEmpty()) {
+                            duration = Long.parseLong(number) * 1000l; // Multiply by 1000 to convert it to milliseconds
+                        }
+
+                        getTweetsFromStream(leftBottom, rightTop, rightBottom, leftTop, distanceInKM, centerLocation, TWEET_COUNT_LIMIT, duration);
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                })
+                .show();
+    }
+
+    private void startPredefinedStream() {
+//        logIt("leftBottom: " + leftBottomX + " - " + leftBottomY);
+//        logIt("rightTop: " + rightTopX + " - " + rightTopY);
+        final LatLng rightBottom = new LatLng(35.5321015379226, 45.9504055604339);
+        final LatLng leftTop = new LatLng(42.4449689530187, 24.6808632463217);
+
+        // Find a radius that encapsulates the selected area
+        final LatLng leftBottom = new LatLng(35.5321015379226, 24.6808632463217);
+        final LatLng rightTop = new LatLng(42.4449689530187, 45.9504055604339);
+
+        float[] results = new float[1];
+        Location.distanceBetween(leftBottom.latitude, leftBottom.longitude, rightTop.latitude, rightTop.longitude, results);
+
+//        final String distanceInKM = df.format((double) (results[0]/1000));
+        final double distanceInKM = (double) (results[0]/1000);
+        logIt("Distance is " + distanceInKM + " km");
+
+        // Find the center geolocation of the selected area
+        Point pLeftBottom = map.getProjection().toScreenLocation(leftBottom);
+        Point pRightTop = map.getProjection().toScreenLocation(rightTop);
+        float centerX = (pLeftBottom.x + pRightTop.x) / 2;
+        float centerY = (pLeftBottom.y + pRightTop.y) / 2;
 
         final LatLng centerLocation = map.getProjection().fromScreenLocation(new Point((int) centerX, (int) centerY));
         logIt("Center Location: " + centerLocation.toString());
@@ -1200,6 +1303,9 @@ public class ShowMapFragment extends Fragment {
                 }
 
                 break;
+            case R.id.menuPredefinedArea:
+                startPredefinedStream();
+                break;
         }
 
         return super.onOptionsItemSelected(item);
@@ -1242,6 +1348,12 @@ public class ShowMapFragment extends Fragment {
         super.onDestroy();
         mapView.onDestroy();
         comm.setAllStreamObjects(allStreamObjects);
+
+        if(myTableStreamSession != null) myTableStreamSession.close();
+        if(myTableTweet != null) myTableTweet.close();
+        if(myTableTwitterUser != null) myTableTwitterUser.close();
+        if(myTableTweetMedia != null) myTableTweetMedia.close();
+        if(myTableTwitterLocation != null) myTableTwitterLocation.close();
     }
 
     public interface CommunicatorShowMapFragment {

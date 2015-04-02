@@ -48,7 +48,9 @@ public class DBAdapter {
                     + DBAdapterTweet.KEY_IN_REPLY_TO_USER_ID +      " integer, "
                     + DBAdapterTweet.KEY_LOC_ID +                   " text, "
                     + DBAdapterTweet.KEY_MEDIA_COUNT +              " integer, "
-                    + DBAdapterTweet.KEY_IS_SENSITIVE +             " integer"
+                    + DBAdapterTweet.KEY_IS_SENSITIVE +             " integer, "
+                    + DBAdapterTweet.KEY_LATITUDE +                 " real, "
+                    + DBAdapterTweet.KEY_LONGITUDE +                " real "
             + ");";
 
     private static final String CREATE_TABLE_TWITTER_USER =

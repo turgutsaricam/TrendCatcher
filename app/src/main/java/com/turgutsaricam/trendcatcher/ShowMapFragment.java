@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.location.Location;
+import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -114,6 +115,8 @@ public class ShowMapFragment extends Fragment {
     long streamEndTime = 0l;
 
     long streamCount = 0;
+
+    MediaPlayer mediaPlayer;
 
     public static class StreamObject {
         private long id;
@@ -258,6 +261,9 @@ public class ShowMapFragment extends Fragment {
         Marker marker;
         long tweetId;
 
+        double latitude = 0;
+        double longitude = 0;
+
         public StatusObject(Status status, Marker marker) {
             this.status = status;
             this.marker = marker;
@@ -323,6 +329,8 @@ public class ShowMapFragment extends Fragment {
         myTableTwitterUser.open();
         myTableTweetMedia.open();
         myTableTwitterLocation.open();
+
+        mediaPlayer = MediaPlayer.create(getActivity(), R.raw.finished);
     }
 
     @Override
@@ -871,7 +879,9 @@ public class ShowMapFragment extends Fragment {
                                 statusHolder.getInReplyToUserId(),
                                 statusHolder.getPlace() == null ? null : statusHolder.getPlace().getId(),
                                 statusHolder.getExtendedMediaEntities().length,
-                                statusHolder.isPossiblySensitive() ? 1 : 0
+                                statusHolder.isPossiblySensitive() ? 1 : 0,
+                                so.latitude,
+                                so.longitude
                         );
 
                         Log.e("", "myTableTwitterLocation is null:" + (myTableTwitterLocation == null));
@@ -916,7 +926,7 @@ public class ShowMapFragment extends Fragment {
                                         userId,
                                         tweetId,
                                         DBAdapterTweetMedia.TYPE_URL,
-                                        un.getURL(),
+                                        un.getExpandedURL(),
                                         sessionId
                                 );
                             }
@@ -971,6 +981,7 @@ public class ShowMapFragment extends Fragment {
         @Override
         protected void onPostExecute(Void aVoid) {
             if(progressBar != null) progressBar.dismiss();
+            mediaPlayer.start();
         }
     }
 
@@ -1008,6 +1019,9 @@ public class ShowMapFragment extends Fragment {
         // Create new TweetMarker and add it to the list
         StatusObject statusObject = new StatusObject(currentStatus, mMarker);
         allStatusObjects.add(statusObject);
+
+        statusObject.latitude = mMarker.getPosition().latitude;
+        statusObject.longitude = mMarker.getPosition().longitude;
 
         // Add status to the list holding all of the tweets
         streamObject.addStatusObject(statusObject);

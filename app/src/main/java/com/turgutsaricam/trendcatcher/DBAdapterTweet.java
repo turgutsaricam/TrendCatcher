@@ -32,6 +32,8 @@ public class DBAdapterTweet {
     public static final int COL_LOC_ID                          = 11;
     public static final int COL_MEDIA_COUNT                     = 12;
     public static final int COL_IS_SENSITIVE                    = 13;
+    public static final int COL_LATITUDE                        = 14;
+    public static final int COL_LONGITUDE                       = 15;
 
     // Field names
     public static final String KEY_STREAM_SESSION_ID            = "stream_session_id";
@@ -47,11 +49,13 @@ public class DBAdapterTweet {
     public static final String KEY_LOC_ID                       = "loc_id";
     public static final String KEY_MEDIA_COUNT                  = "media_count";
     public static final String KEY_IS_SENSITIVE                 = "is_sensitive";
+    public static final String KEY_LATITUDE                     = "latitude";
+    public static final String KEY_LONGITUDE                    = "longitude";
 
     // All keys
     public static final String[] ALL_KEYS = new String[] { KEY_ROWID, KEY_STREAM_SESSION_ID, KEY_USER_ID, KEY_TWEET_ID, KEY_TWEET_TEXT,
             KEY_CREATED_AT, KEY_LANG, KEY_RETWEET_COUNT, KEY_IN_REPLY_TO_SCREEN_NAME, KEY_IN_REPLY_TO_STATUS_ID, KEY_IN_REPLY_TO_USER_ID,
-            KEY_LOC_ID, KEY_MEDIA_COUNT, KEY_IS_SENSITIVE};
+            KEY_LOC_ID, KEY_MEDIA_COUNT, KEY_IS_SENSITIVE, KEY_LATITUDE, KEY_LONGITUDE};
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -109,7 +113,8 @@ public class DBAdapterTweet {
      */
     public long insertRow(long stream_session_id, long user_id, long tweet_id, String tweet_text, long created_at,
                           String lang, int retweet_count, String in_reply_to_screen_name, long in_reply_to_status_id,
-                          long in_reply_to_user_id, String loc_id, int media_count, int is_sensitive) {
+                          long in_reply_to_user_id, String loc_id, int media_count, int is_sensitive,
+                          double latitude, double longitude) {
 
         ContentValues cv = new ContentValues();
         cv.put(KEY_STREAM_SESSION_ID, stream_session_id);
@@ -125,6 +130,8 @@ public class DBAdapterTweet {
         cv.put(KEY_LOC_ID, loc_id);
         cv.put(KEY_MEDIA_COUNT, media_count);
         cv.put(KEY_IS_SENSITIVE, is_sensitive);
+        cv.put(KEY_LATITUDE, latitude);
+        cv.put(KEY_LONGITUDE, longitude);
 
         return mDB.insert(DATABASE_TABLE, null, cv);
     }

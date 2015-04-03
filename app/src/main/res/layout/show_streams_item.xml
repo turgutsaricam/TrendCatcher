@@ -41,13 +41,17 @@
         android:layout_centerVertical="true"
         android:textSize="16sp" />
 
-    <ImageView
+    <TextView
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:id="@+id/ivShowBoundaries"
-        android:src="@drawable/ic_action_world"
-        android:layout_centerVertical="true"
+        android:gravity="center"
         android:layout_alignParentLeft="true"
-        android:layout_marginLeft="12dp" />
+        android:layout_marginLeft="12dp"
+        android:text="21"
+        android:id="@+id/tvStreamHour"
+        android:layout_centerVertical="true"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        />
 
 </RelativeLayout>

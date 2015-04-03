@@ -127,9 +127,9 @@ public class ShowStreamsPagerFragment extends Fragment {
             return 7;
         }
 
+        CharSequence[] titles = new CharSequence[] {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
         @Override
         public CharSequence getPageTitle(int position) {
-            CharSequence[] titles = new CharSequence[] {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
             return titles[position];
         }
 

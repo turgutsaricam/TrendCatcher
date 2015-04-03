@@ -18,6 +18,8 @@ import android.widget.Toast;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -150,6 +152,7 @@ public class ShowStreamsFragment extends Fragment {
 
         @Override
         protected void onPostExecute(Void aVoid) {
+            sortByTimeAsc(items);
             myList.addAll(items);
             arrayAdapter = new MyListAdapter(getActivity(), myList);
             Log.e("", "Is listView null: " + (listView == null));
@@ -161,10 +164,30 @@ public class ShowStreamsFragment extends Fragment {
         }
     }
 
+    private void sortByTimeAsc(List<MyListItem> list) {
+        Collections.sort(list, new Comparator<MyListItem>() {
+            @Override
+            public int compare(MyListItem lhs, MyListItem rhs) {
+                int h1 = lhs.hour;
+                int h2 = rhs.hour;
+
+                if(h1 > h2) {
+                    return 1;
+                } else if(h1 < h2) {
+                    return -1;
+                }
+
+                return 0;
+            }
+        });
+    }
+
     private class MyListItem {
         long id;
         int tweetCount = 0;
         long createdAt = 0;
+
+        int hour = -1;
 
         String createdAtText = "";
         public void setCreatedAtText() {
@@ -173,6 +196,7 @@ public class ShowStreamsFragment extends Fragment {
             c.setTimeInMillis(createdAt);
 
             createdAtText = df.format(c.getTime());
+            hour = c.get(Calendar.HOUR_OF_DAY);
         }
     }
 
@@ -210,7 +234,7 @@ public class ShowStreamsFragment extends Fragment {
                 holder.tvStreamId = (TextView) convertView.findViewById(R.id.tvStreamId);
                 holder.tvCreatedAt = (TextView) convertView.findViewById(R.id.tvStreamCreatedAt);
                 holder.tvTweetCount = (TextView) convertView.findViewById(R.id.tvStreamTweetCount);
-                holder.ivMap = (ImageView) convertView.findViewById(R.id.ivShowBoundaries);
+                holder.tvHour = (TextView) convertView.findViewById(R.id.tvStreamHour);
 
                 convertView.setTag(holder);
             } else {
@@ -221,12 +245,7 @@ public class ShowStreamsFragment extends Fragment {
             holder.tvStreamId.setText(String.valueOf(item.id));
             holder.tvCreatedAt.setText(item.createdAtText);
             holder.tvTweetCount.setText("Tweet count: " + item.tweetCount);
-            holder.ivMap.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Toast.makeText(context, "Show boundaries", Toast.LENGTH_SHORT).show();
-                }
-            });
+            holder.tvHour.setText(String.valueOf(item.hour));
 
             return convertView;
         }
@@ -236,7 +255,7 @@ public class ShowStreamsFragment extends Fragment {
         TextView tvTweetCount;
         TextView tvStreamId;
         TextView tvCreatedAt;
-        ImageView ivMap;
+        TextView tvHour;
     }
 
     @Override

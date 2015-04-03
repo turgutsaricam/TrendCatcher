@@ -156,8 +156,8 @@ public class MainActivity extends ActionBarActivity
                 tag = "ShowTweetsFragment";
                 break;
             case 4:
-                fragment = new ShowStreamsFragment();
-                tag = "ShowStreamsFragment";
+                fragment = new ShowStreamsPagerFragment();
+                tag = "ShowStreamsPagerFragment";
                 break;
             case 5:
                 importDatabase();

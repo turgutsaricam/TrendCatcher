@@ -28,21 +28,41 @@ public class ShowStreamsFragment extends Fragment {
 
     View v;
     ListView listView;
+    TextView tvInfo;
 
     List<MyListItem> myList = new ArrayList<>();;
     MyListAdapter arrayAdapter;
+
+//    List<MyListItem> listMonday = new ArrayList<>();
+//    List<MyListItem> listTuesday = new ArrayList<>();
+//    List<MyListItem> listWednesday = new ArrayList<>();
+//    List<MyListItem> listThursday = new ArrayList<>();
+//    List<MyListItem> listFriday = new ArrayList<>();
+//    List<MyListItem> listSaturday = new ArrayList<>();
+//    List<MyListItem> listSunday = new ArrayList<>();
+
+    // This should be set as Calendar."DAY"     e.g. Calendar.MONDAY, Calendar.TUESDAY...
+    int loadedDay = -1;
+
+    long totalTweetCount = 0;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         myTableStreamSession = new DBAdapterStreamSession(getActivity());
         myTableStreamSession.open();
+
+        if(getArguments() != null) {
+            loadedDay = getArguments().getInt("loaded_day", -1);
+        }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         v = inflater.inflate(R.layout.show_streams_fragment, container, false);
         listView = (ListView) v.findViewById(R.id.lvShowStreamsFragment);
+        tvInfo = (TextView) v.findViewById(R.id.tvStreamInfo);
+        tvInfo.setVisibility(View.GONE);
 
         return v;
     }
@@ -53,32 +73,75 @@ public class ShowStreamsFragment extends Fragment {
         new PopulateList().execute();
     }
 
+    private void clearLists() {
+        myList.clear();
+//        listMonday.clear();
+//        listTuesday.clear();
+//        listWednesday.clear();
+//        listThursday.clear();
+//        listFriday.clear();
+//        listSaturday.clear();
+//        listSunday.clear();
+    }
+
     private class PopulateList extends AsyncTask<Void, MyListItem, Void> {
 
         List<MyListItem> items = new ArrayList<>();
 
         @Override
         protected void onPreExecute() {
-            myList.clear();
+            clearLists();
         }
 
         @Override
         protected Void doInBackground(Void... params) {
             final Cursor cursor = myTableStreamSession.getAll();
-            items.clear();
+
+            final Calendar calendar = Calendar.getInstance();
+
             if(cursor != null && cursor.getCount() > 0) {
                 do {
-                    MyListItem item = new MyListItem() {
-                        {
-                            id = cursor.getLong(DBAdapterStreamSession.COL_ROWID);
-                            tweetCount = cursor.getInt(DBAdapterStreamSession.COL_TWEET_COUNT);
-                            createdAt = cursor.getLong(DBAdapterStreamSession.COL_STARTED_AT);
+                    final long startedAt = cursor.getLong(DBAdapterStreamSession.COL_STARTED_AT);
+                    calendar.setTimeInMillis(startedAt);
 
-                            setCreatedAtText();
-                        }
-                    };
+                    if(calendar.get(Calendar.DAY_OF_WEEK) == loadedDay) {
+                        MyListItem item = new MyListItem() {
+                            {
+                                id = cursor.getLong(DBAdapterStreamSession.COL_ROWID);
+                                tweetCount = cursor.getInt(DBAdapterStreamSession.COL_TWEET_COUNT);
+                                createdAt = startedAt;
 
-                    items.add(item);
+                                totalTweetCount += tweetCount;
+                                setCreatedAtText();
+                            }
+                        };
+
+                        items.add(item);
+
+//                    switch (calendar.get(Calendar.DAY_OF_WEEK)) {
+//                        case Calendar.MONDAY:
+//                            listMonday.add(item);
+//                            break;
+//                        case Calendar.TUESDAY:
+//                            listTuesday.add(item);
+//                            break;
+//                        case Calendar.WEDNESDAY:
+//                            listWednesday.add(item);
+//                            break;
+//                        case Calendar.THURSDAY:
+//                            listThursday.add(item);
+//                            break;
+//                        case Calendar.FRIDAY:
+//                            listFriday.add(item);
+//                            break;
+//                        case Calendar.SATURDAY:
+//                            listSaturday.add(item);
+//                            break;
+//                        case Calendar.SUNDAY:
+//                            listSunday.add(item);
+//                            break;
+//                    }
+                    }
                 } while(cursor.moveToNext());
                 cursor.close();
             }
@@ -93,6 +156,8 @@ public class ShowStreamsFragment extends Fragment {
             Log.e("", "Is arrayAdapter null: " + (arrayAdapter == null));
 
             listView.setAdapter(arrayAdapter);
+            tvInfo.setText(totalTweetCount + " tweets");
+            tvInfo.setVisibility(View.VISIBLE);
         }
     }
 

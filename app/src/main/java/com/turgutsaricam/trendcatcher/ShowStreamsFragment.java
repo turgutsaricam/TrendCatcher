@@ -10,10 +10,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -152,7 +150,7 @@ public class ShowStreamsFragment extends Fragment {
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            sortByTimeAsc(items);
+            sortByTimeDesc(items);
             myList.addAll(items);
             arrayAdapter = new MyListAdapter(getActivity(), myList);
             Log.e("", "Is listView null: " + (listView == null));
@@ -164,7 +162,7 @@ public class ShowStreamsFragment extends Fragment {
         }
     }
 
-    private void sortByTimeAsc(List<MyListItem> list) {
+    private void sortByTimeDesc(List<MyListItem> list) {
         Collections.sort(list, new Comparator<MyListItem>() {
             @Override
             public int compare(MyListItem lhs, MyListItem rhs) {
@@ -172,9 +170,9 @@ public class ShowStreamsFragment extends Fragment {
                 int h2 = rhs.hour;
 
                 if(h1 > h2) {
-                    return 1;
-                } else if(h1 < h2) {
                     return -1;
+                } else if(h1 < h2) {
+                    return 11;
                 }
 
                 return 0;

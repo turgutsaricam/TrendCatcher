@@ -2,6 +2,7 @@ package com.turgutsaricam.trendcatcher;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
@@ -134,5 +135,18 @@ public class DBAdapterTweet {
         cv.put(KEY_LONGITUDE, longitude);
 
         return mDB.insert(DATABASE_TABLE, null, cv);
+    }
+
+    public int getTotalTweetCount() {
+        Cursor c = mDB.query(true, "sqlite_sequence", new String[] {"name", "seq"}, "name='" + DATABASE_TABLE + "'",
+                null, null, null, null, null);
+        if(c != null) {
+            c.moveToFirst();
+            int count = c.getInt(1);
+            c.close();
+            return count;
+        }
+
+        return 0;
     }
 }

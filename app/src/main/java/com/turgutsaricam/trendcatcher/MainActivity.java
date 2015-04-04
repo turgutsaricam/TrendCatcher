@@ -1,6 +1,8 @@
 package com.turgutsaricam.trendcatcher;
 
+import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.Fragment;
@@ -9,12 +11,14 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.twitter.sdk.android.Twitter;
 import com.twitter.sdk.android.core.Callback;
 import com.twitter.sdk.android.core.Result;
@@ -160,10 +164,30 @@ public class MainActivity extends ActionBarActivity
                 tag = "ShowStreamsPagerFragment";
                 break;
             case 5:
-                importDatabase();
+//                importDatabase();
+                new MaterialDialog.Builder(this)
+                        .content("Import database from backup?")
+                        .negativeText("Cancel")
+                        .positiveText("IMPORT")
+                        .callback(new MaterialDialog.ButtonCallback() {
+                            @Override
+                            public void onPositive(MaterialDialog dialog) {
+                                super.onPositive(dialog);
+                                new ImportExportDB(false, MainActivity.this).execute();
+                            }
+
+                            @Override
+                            public void onNegative(MaterialDialog dialog) {
+                                super.onNegative(dialog);
+                                dialog.dismiss();
+                            }
+                        })
+                        .show();
+
                 break;
             case 6:
-                exportDatabase();
+//                exportDatabase();
+                new ImportExportDB(true, this).execute();
                 break;
         }
 
@@ -298,8 +322,52 @@ public class MainActivity extends ActionBarActivity
         }
     }
 
+    private class ImportExportDB extends AsyncTask<Void, Void, Void> {
+
+        boolean export;
+        MaterialDialog pBar;
+        Context ctx;
+
+        boolean success = false;
+
+        protected ImportExportDB(boolean shouldBeExported, Context ctx) {
+            this.export = shouldBeExported;
+            this.ctx = ctx;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            pBar = new MaterialDialog.Builder(ctx)
+                    .progress(true, 100)
+                    .content("Database is being " + (export ? "exported" : "imported"))
+                    .cancelable(false)
+                    .show();
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            if(export) {
+                success = exportDatabase();
+            } else {
+                success = importDatabase();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            if(success) {
+                makeToast((export ? "Export" : "Import") + " successful");
+            } else {
+                makeToast((export ? "Export" : "Import") + " failed");
+            }
+
+            if(pBar != null) pBar.dismiss();
+        }
+    }
+
     @SuppressWarnings("resource")
-    private void importDatabase() {
+    private boolean importDatabase() {
 
         // importing database
         try {
@@ -327,22 +395,22 @@ public class MainActivity extends ActionBarActivity
                     dst.transferFrom(src, 0, src.size());
                     src.close();
                     dst.close();
-                    Toast.makeText(
-                            this,
-                            DBAdapter.DATABASE_NAME + " has been imported.",
-                            Toast.LENGTH_LONG).show();
+                    return true;
                 } else {
-                    Toast.makeText(this, "Backup does not exist.",
-                            Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(this, "Backup does not exist.",
+//                            Toast.LENGTH_SHORT).show();
+                    Log.e("", "Backup does not exist.");
                 }
             }
         } catch (Exception e) {
-//			Log.e("Import Database: ", e.toString());
+			Log.e("Import Database: ", e.toString());
         }
+
+        return false;
     }
 
     @SuppressWarnings("resource")
-    private void exportDatabase() {
+    private boolean exportDatabase() {
 
         try {
             File sd = Environment.getExternalStorageDirectory();
@@ -383,17 +451,15 @@ public class MainActivity extends ActionBarActivity
 
                     src.close();
                     dst.close();
-                    Toast.makeText(
-                            this,
-                            DBAdapter.DATABASE_NAME
-                                    + " has been exported.",
-                            Toast.LENGTH_LONG).show();
+                    return true;
                 }
 
             }
         } catch (Exception e) {
-//			Log.e("Export Database: ", e.toString());
+			Log.e("Export Database: ", e.toString());
         }
+
+        return false;
     }
 
     @Override

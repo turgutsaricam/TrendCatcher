@@ -117,6 +117,8 @@ public class ShowMapFragment extends Fragment {
     long streamCount = 0;
 
     MediaPlayer mediaPlayer;
+    final String SHARED_PREFS = "prefs";
+    final String SHARED_PREFS_TWEET_LIMIT = "tweet_limit";
 
     public static class StreamObject {
         private long id;
@@ -353,6 +355,7 @@ public class ShowMapFragment extends Fragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         setUpMap(savedInstanceState);
+        TWEET_COUNT_LIMIT = getActivity().getSharedPreferences(SHARED_PREFS, 0).getInt(SHARED_PREFS_TWEET_LIMIT, 500);
         loadAllTweets();
     }
 
@@ -560,7 +563,7 @@ public class ShowMapFragment extends Fragment {
             this.streamObject = streamObject;
             this.tweetLimit = tweetLimit;
 
-            logIt("Query is: " + mQuery.toString());
+//            logIt("Query is: " + mQuery.toString());
         }
 
         @Override
@@ -584,7 +587,7 @@ public class ShowMapFragment extends Fragment {
                     publishProgress(status);
                 }
             } catch (TwitterException e) {
-                logIt(e.toString());
+//                logIt(e.toString());
             }
             return null;
         }
@@ -647,7 +650,7 @@ public class ShowMapFragment extends Fragment {
                     if(location != null) {
                         publishProgress(status);
                     } else {
-                        logIt("Location: NULL");
+//                        logIt("Location: NULL");
                     }
                 }
 
@@ -673,7 +676,7 @@ public class ShowMapFragment extends Fragment {
 
                 @Override
                 public void onException(Exception e) {
-                    logIt("StatusListener Exception " + e.toString());
+//                    logIt("StatusListener Exception " + e.toString());
                 }
             };
         }
@@ -695,7 +698,7 @@ public class ShowMapFragment extends Fragment {
 
         @Override
         protected void onProgressUpdate(twitter4j.Status... values) {
-            logIt("New status published");
+//            logIt("New status published");
             twitter4j.Status currentStatus = values[0];
 
             if(streamObject.getTweetLimit() > 0) {
@@ -719,7 +722,7 @@ public class ShowMapFragment extends Fragment {
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            logIt("onPostExecute");
+//            logIt("onPostExecute");
         }
 
         public void stopStream(boolean manuallyEnded) {
@@ -854,16 +857,16 @@ public class ShowMapFragment extends Fragment {
 
                         userIds.add(userHolder.getId());
 
-                        Log.e("", "myTableTweet is null:" + (myTableTweet == null));
-                        Log.e("", "sessionId: " + sessionId);
-                        Log.e("", "userId: " + userId);
-                        Log.e("", "tweetId: " + tweetId);
-                        Log.e("", "statusHolder.getText():" + (statusHolder.getText() == null));
-                        Log.e("", "statusHolder.getCreatedAt():" + (statusHolder.getCreatedAt() == null));
-                        Log.e("", "statusHolder.getLang():" + (statusHolder.getLang() == null));
-                        Log.e("", "statusHolder.getInReplyToScreenName():" + (statusHolder.getInReplyToScreenName() == null));
-                        Log.e("", "statusHolder.getPlace():" + (statusHolder.getPlace() == null));
-                        Log.e("", "statusHolder.getExtendedMediaEntities():" + (statusHolder.getExtendedMediaEntities() == null));
+//                        Log.e("", "myTableTweet is null:" + (myTableTweet == null));
+//                        Log.e("", "sessionId: " + sessionId);
+//                        Log.e("", "userId: " + userId);
+//                        Log.e("", "tweetId: " + tweetId);
+//                        Log.e("", "statusHolder.getText():" + (statusHolder.getText() == null));
+//                        Log.e("", "statusHolder.getCreatedAt():" + (statusHolder.getCreatedAt() == null));
+//                        Log.e("", "statusHolder.getLang():" + (statusHolder.getLang() == null));
+//                        Log.e("", "statusHolder.getInReplyToScreenName():" + (statusHolder.getInReplyToScreenName() == null));
+//                        Log.e("", "statusHolder.getPlace():" + (statusHolder.getPlace() == null));
+//                        Log.e("", "statusHolder.getExtendedMediaEntities():" + (statusHolder.getExtendedMediaEntities() == null));
 
                         // Insert tweet to db
                         myTableTweet.insertRow(
@@ -884,7 +887,7 @@ public class ShowMapFragment extends Fragment {
                                 so.longitude
                         );
 
-                        Log.e("", "myTableTwitterLocation is null:" + (myTableTwitterLocation == null));
+//                        Log.e("", "myTableTwitterLocation is null:" + (myTableTwitterLocation == null));
 
                         // Insert location to db
                         Place place = statusHolder.getPlace();
@@ -1029,7 +1032,7 @@ public class ShowMapFragment extends Fragment {
         tvTweetCount.setText(String.valueOf(calculateTweetCount()));
 
         tvCurrentStreamTweetCount.setText(streamObject.getStatusObjects().size() + "/" + per);
-        logIt("   Status added.");
+//        logIt("   Status added.");
     }
 
     public int calculateTweetCount() {
@@ -1055,14 +1058,14 @@ public class ShowMapFragment extends Fragment {
 
 //        final String distanceInKM = df.format((double) (results[0]/1000));
         final double distanceInKM = (double) (results[0]/1000);
-        logIt("Distance is " + distanceInKM + " km");
+//        logIt("Distance is " + distanceInKM + " km");
 
         // Find the center geolocation of the selected area
         float centerX = (leftBottomX + rightTopX) / 2;
         float centerY = (leftBottomY + rightTopY) / 2;
 
         final LatLng centerLocation = map.getProjection().fromScreenLocation(new Point((int) centerX, (int) centerY));
-        logIt("Center Location: " + centerLocation.toString());
+//        logIt("Center Location: " + centerLocation.toString());
 
         // Show a dialog to the user for confirmation and tweet limit arrangement
         String messageAddition = "";
@@ -1125,7 +1128,7 @@ public class ShowMapFragment extends Fragment {
 
 //        final String distanceInKM = df.format((double) (results[0]/1000));
         final double distanceInKM = (double) (results[0]/1000);
-        logIt("Distance is " + distanceInKM + " km");
+//        logIt("Distance is " + distanceInKM + " km");
 
         // Find the center geolocation of the selected area
         Point pLeftBottom = map.getProjection().toScreenLocation(leftBottom);
@@ -1134,7 +1137,7 @@ public class ShowMapFragment extends Fragment {
         float centerY = (pLeftBottom.y + pRightTop.y) / 2;
 
         final LatLng centerLocation = map.getProjection().fromScreenLocation(new Point((int) centerX, (int) centerY));
-        logIt("Center Location: " + centerLocation.toString());
+//        logIt("Center Location: " + centerLocation.toString());
 
         // Show a dialog to the user for confirmation and tweet limit arrangement
         String messageAddition = "";
@@ -1163,7 +1166,8 @@ public class ShowMapFragment extends Fragment {
                             makeToast("Tweet limit input is empty. Limit is set to 500.");
                             TWEET_COUNT_LIMIT = 500;
                         }
-
+                        getActivity().getSharedPreferences(SHARED_PREFS, 0)
+                                .edit().putInt(SHARED_PREFS_TWEET_LIMIT, TWEET_COUNT_LIMIT).commit();
                         number = etDurationLimit.getText().toString();
                         long duration = 0;
                         if(!number.isEmpty()) {

@@ -1,5 +1,8 @@
 package com.turgutsaricam.trendcatcher;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -7,6 +10,9 @@ import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -23,10 +29,14 @@ public class ShowStreamsPagerFragment extends Fragment {
     PagerSlidingTabStrip viewPagerTabStrip;
     MyPagerAdapter mPagerAdapter;
 
+    DBAdapterTweet dbTweet;
+    int totalTweetCount = 0;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        setHasOptionsMenu(true);
         if(savedInstanceState != null) {
             restorePage = savedInstanceState.getInt("restorePage");
         }
@@ -46,7 +56,10 @@ public class ShowStreamsPagerFragment extends Fragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+        dbTweet = new DBAdapterTweet(getActivity());
+        dbTweet.open();
 
+        totalTweetCount = dbTweet.getTotalTweetCount();
     }
 
     private void setViews() {
@@ -171,8 +184,39 @@ public class ShowStreamsPagerFragment extends Fragment {
     }
 
     @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.show_streams_pager_fragment, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.totalTweetCount:
+                new AlertDialog.Builder(getActivity())
+                        .setMessage(totalTweetCount + " tweets found.")
+                        .setNeutralButton("OK", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        })
+                        .show();
+                break;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt("restorePage", restorePage);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if(dbTweet != null) dbTweet.close();
     }
 }

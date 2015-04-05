@@ -630,6 +630,10 @@ public class ShowMapFragment extends Fragment {
 
         @Override
         protected void onPreExecute() {
+            // Keep screen on
+            v.setKeepScreenOn(true);
+            miKeepScreenOn.setChecked(true);
+
             // Set map rectangle color
             streamObject.getMapRectangle().setColor(COLOR_RED);
 
@@ -985,6 +989,10 @@ public class ShowMapFragment extends Fragment {
         protected void onPostExecute(Void aVoid) {
             if(progressBar != null) progressBar.dismiss();
             mediaPlayer.start();
+
+            // Do not keep screen on anymore
+            v.setKeepScreenOn(false);
+            miKeepScreenOn.setChecked(false);
         }
     }
 
@@ -1281,11 +1289,13 @@ public class ShowMapFragment extends Fragment {
     }
 
     MenuItem miSwitch = null;
+    MenuItem miKeepScreenOn = null;
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.tweet_map, menu);
         miSwitch = menu.findItem(R.id.menuSwitchMapUtils);
+        miKeepScreenOn = menu.findItem(R.id.menuKeepScreenOn);
         switchMenuIcon(mapUtilsView.isActive(), false);
     }
 

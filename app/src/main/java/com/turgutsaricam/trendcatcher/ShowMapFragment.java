@@ -11,6 +11,7 @@ import android.location.Location;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -21,6 +22,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.Chronometer;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -94,9 +96,10 @@ public class ShowMapFragment extends Fragment {
     CameraUpdate cameraUpdate;
 
     MapUtilsView mapUtilsView;
-    TextView tvTweetCount, tvCurrentStreamTweetCount, tvDurationLimit;
+    TextView tvTweetCount, tvCurrentStreamTweetCount, tvDurationLimit, tvAutoMode, tvTweet;
     EditText etTweetLimit;
     Chronometer chronometer;
+    CheckBox cbAutoMode;
 
     FetchTweetsTask fetchTweetsTask;
     private int TWEET_COUNT_LIMIT = 500;
@@ -119,6 +122,8 @@ public class ShowMapFragment extends Fragment {
     MediaPlayer mediaPlayer;
     final String SHARED_PREFS = "prefs";
     final String SHARED_PREFS_TWEET_LIMIT = "tweet_limit";
+
+    boolean autoMode = false;
 
     public static class StreamObject {
         private long id;
@@ -346,6 +351,10 @@ public class ShowMapFragment extends Fragment {
         tvCurrentStreamTweetCount = (TextView) v.findViewById(R.id.tvCurrentStreamTweetCount);
         tvDurationLimit = (TextView) v.findViewById(R.id.tvDurationLimit);
 
+        tvAutoMode = (TextView) v.findViewById(R.id.tvAutoMode);
+        tvTweet = (TextView) v.findViewById(R.id.tvTweet);
+        setAutoModeInfo();
+
         mapUtilsView = (MapUtilsView) v.findViewById(R.id.mapUtilsView);
         chronometer = (Chronometer) v.findViewById(R.id.chronometer);
         return v;
@@ -401,19 +410,26 @@ public class ShowMapFragment extends Fragment {
         map.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
             @Override
             public void onInfoWindowClick(Marker marker) {
-                for(StatusObject so : allStatusObjects) {
-                    if(so.getMarker().equals(marker)) {
+                for (StatusObject so : allStatusObjects) {
+                    if (so.getMarker() != null && so.getMarker().equals(marker)) {
                         dialogSingleTweet(so);
+                        break;
                     }
                 }
 
-                for(InfoMarker im : allInfoMarkers) {
-                    if(im.marker.equals(marker)) {
+                for (InfoMarker im : allInfoMarkers) {
+                    if (im.marker != null && im.marker.equals(marker)) {
                         dialogEndedStreamOptions(im.getStreamObject());
+                        break;
                     }
                 }
             }
         });
+    }
+
+    private void setAutoModeInfo() {
+        tvAutoMode.setVisibility(autoMode ? View.VISIBLE : View.GONE);
+        tvTweet.setVisibility(autoMode ? View.VISIBLE : View.GONE);
     }
 
     private void loadAllTweets() {
@@ -975,6 +991,9 @@ public class ShowMapFragment extends Fragment {
 
                 }
 
+                statuses.clear();
+                userIds.clear();
+
             }
 
             return null;
@@ -987,12 +1006,46 @@ public class ShowMapFragment extends Fragment {
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            if(progressBar != null) progressBar.dismiss();
+            if(progressBar != null) {
+                progressBar.dismiss();
+            }
             mediaPlayer.start();
 
             // Do not keep screen on anymore
             v.setKeepScreenOn(false);
             miKeepScreenOn.setChecked(false);
+
+            // Auto-mode stuff
+            if(autoMode) {
+                // Notify user about starting a new stream
+                final MaterialDialog dialog = new MaterialDialog.Builder(getActivity())
+                        .content("New stream will start in 10 sec")
+                        .negativeText("STOP")
+                        .callback(new MaterialDialog.ButtonCallback() {
+                            @Override
+                            public void onNegative(MaterialDialog dialog) {
+                                super.onNegative(dialog);
+                                autoMode = false;
+                                setAutoModeInfo();
+                            }
+                        })
+                        .cancelable(false)
+                        .show();
+
+                Handler handler = new Handler();
+                Runnable startNewStream = new Runnable() {
+
+                    @Override
+                    public void run() {
+                        if(autoMode) {
+                            dialog.dismiss();
+                            startPredefinedStreamAuto();
+                        }
+                    }
+                };
+
+                handler.postDelayed(startNewStream, 10 * 1000L + 500L);
+            }
         }
     }
 
@@ -1013,26 +1066,31 @@ public class ShowMapFragment extends Fragment {
     }
 
     private void handleTakenStatus(Status currentStatus, StreamObject streamObject, String per) {
+        Marker mMarker = null;
         GeoLocation location = currentStatus.getGeoLocation();
         LatLng latLng = new LatLng(
                 location.getLatitude(),
                 location.getLongitude()
         );
 
-        Marker mMarker = map.addMarker(new MarkerOptions()
-                        .position(latLng)
-                        .title(currentStatus.getUser().getName() + " @" + currentStatus.getUser().getScreenName())
-                        .snippet(currentStatus.getText())
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_small))
-        );
-        mMarker.showInfoWindow();
+        if(!autoMode) {
+            mMarker = map.addMarker(new MarkerOptions()
+                            .position(latLng)
+                            .title(currentStatus.getUser().getName() + " @" + currentStatus.getUser().getScreenName())
+                            .snippet(currentStatus.getText())
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_map_marker_small))
+            );
+            mMarker.showInfoWindow();
+        } else {
+            tvTweet.setText(currentStatus.getText());
+        }
 
         // Create new TweetMarker and add it to the list
         StatusObject statusObject = new StatusObject(currentStatus, mMarker);
         allStatusObjects.add(statusObject);
 
-        statusObject.latitude = mMarker.getPosition().latitude;
-        statusObject.longitude = mMarker.getPosition().longitude;
+        statusObject.latitude = latLng.latitude;
+        statusObject.longitude = latLng.longitude;
 
         // Add status to the list holding all of the tweets
         streamObject.addStatusObject(statusObject);
@@ -1154,6 +1212,7 @@ public class ShowMapFragment extends Fragment {
         }
 
         View v = getActivity().getLayoutInflater().inflate(R.layout.get_tweets_dialog, null);
+        cbAutoMode = (CheckBox) v.findViewById(R.id.cbAutoMode);
         etTweetLimit = (EditText) v.findViewById(R.id.etTweetCountLimit);
         etTweetLimit.setText(String.valueOf(TWEET_COUNT_LIMIT));
 
@@ -1182,6 +1241,9 @@ public class ShowMapFragment extends Fragment {
                             duration = Long.parseLong(number) * 1000l; // Multiply by 1000 to convert it to milliseconds
                         }
 
+                        autoMode = cbAutoMode.isChecked();
+                        setAutoModeInfo();
+
                         getTweetsFromStream(leftBottom, rightTop, rightBottom, leftTop, distanceInKM, centerLocation, TWEET_COUNT_LIMIT, duration);
                     }
                 })
@@ -1192,6 +1254,31 @@ public class ShowMapFragment extends Fragment {
                     }
                 })
                 .show();
+    }
+
+    private void startPredefinedStreamAuto() {
+        clearTweets();
+        final LatLng rightBottom = new LatLng(35.5321015379226, 45.9504055604339);
+        final LatLng leftTop = new LatLng(42.4449689530187, 24.6808632463217);
+
+        // Find a radius that encapsulates the selected area
+        final LatLng leftBottom = new LatLng(35.5321015379226, 24.6808632463217);
+        final LatLng rightTop = new LatLng(42.4449689530187, 45.9504055604339);
+
+        float[] results = new float[1];
+        Location.distanceBetween(leftBottom.latitude, leftBottom.longitude, rightTop.latitude, rightTop.longitude, results);
+
+        final double distanceInKM = (double) (results[0]/1000);
+
+        // Find the center geolocation of the selected area
+        Point pLeftBottom = map.getProjection().toScreenLocation(leftBottom);
+        Point pRightTop = map.getProjection().toScreenLocation(rightTop);
+        float centerX = (pLeftBottom.x + pRightTop.x) / 2;
+        float centerY = (pLeftBottom.y + pRightTop.y) / 2;
+
+        final LatLng centerLocation = map.getProjection().fromScreenLocation(new Point((int) centerX, (int) centerY));
+
+        getTweetsFromStream(leftBottom, rightTop, rightBottom, leftTop, distanceInKM, centerLocation, TWEET_COUNT_LIMIT, 0);
     }
 
     private void dialogSingleTweet(final StatusObject statusObject) {
@@ -1255,12 +1342,14 @@ public class ShowMapFragment extends Fragment {
         builder.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                streamObject.getInfoMarker().getMarker().remove();
-                streamObject.getMapRectangle().remove();
+                if(streamObject.getInfoMarker() != null) {
+                    streamObject.getInfoMarker().getMarker().remove();
+                    streamObject.getMapRectangle().remove();
+                }
 
                 List<StatusObject> statuses = streamObject.getStatusObjects();
                 for(StatusObject so : statuses) {
-                    so.getMarker().remove();
+                    if(so.getMarker() != null) so.getMarker().remove();
                 }
 
                 allStatusObjects.removeAll(statuses);
@@ -1313,12 +1402,11 @@ public class ShowMapFragment extends Fragment {
                 switchMenuIcon(!activeStatus, true);
                 break;
             case R.id.menuClearTweets:
-                map.clear();
-                allStreamObjects.clear();
-                comm.setAllStreamObjects(allStreamObjects);
-                tvTweetCount.setText(String.valueOf(calculateTweetCount()));
+                clearTweets();
                 break;
             case R.id.menuStopStream:
+                autoMode = false;
+                setAutoModeInfo();
                 if(fetchTweetsTask != null) fetchTweetsTask.stopStream(true);
                 break;
             case R.id.menuKeepScreenOn:
@@ -1337,6 +1425,27 @@ public class ShowMapFragment extends Fragment {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void clearTweets() {
+        map.clear();
+
+        // Null all status objects in order not to keep reference to the objects
+        // and to feed garbage collector
+        for(StreamObject s : allStreamObjects) {
+            for(StatusObject so : s.getStatusObjects()) {
+                so.status = null;
+            }
+
+            s.getStatusObjects().clear();
+            s = null;
+        }
+
+        allStatusObjects.clear();
+
+        allStreamObjects.clear();
+        comm.clearAllStreamObjects();
+        tvTweetCount.setText(String.valueOf(calculateTweetCount()));
     }
 
     private void switchMenuIcon(boolean activeStatus, boolean makeToast) {
@@ -1386,6 +1495,7 @@ public class ShowMapFragment extends Fragment {
 
     public interface CommunicatorShowMapFragment {
         public void setAllStreamObjects(List<StreamObject> streamObjects);
+        public void clearAllStreamObjects();
         public List<ShowMapFragment.StreamObject> getAllStreamObjects();
         public long setStreamStartTime();
         public long setStreamEndTime();

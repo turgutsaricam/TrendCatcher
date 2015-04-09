@@ -5,13 +5,16 @@ import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.afollestad.materialdialogs.MaterialDialog;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -32,14 +35,6 @@ public class ShowStreamsFragment extends Fragment {
 
     List<MyListItem> myList = new ArrayList<>();;
     MyListAdapter arrayAdapter;
-
-//    List<MyListItem> listMonday = new ArrayList<>();
-//    List<MyListItem> listTuesday = new ArrayList<>();
-//    List<MyListItem> listWednesday = new ArrayList<>();
-//    List<MyListItem> listThursday = new ArrayList<>();
-//    List<MyListItem> listFriday = new ArrayList<>();
-//    List<MyListItem> listSaturday = new ArrayList<>();
-//    List<MyListItem> listSunday = new ArrayList<>();
 
     // This should be set as Calendar."DAY"     e.g. Calendar.MONDAY, Calendar.TUESDAY...
     int loadedDay = -1;
@@ -64,7 +59,81 @@ public class ShowStreamsFragment extends Fragment {
         tvInfo = (TextView) v.findViewById(R.id.tvStreamInfo);
         tvInfo.setVisibility(View.GONE);
 
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                new MaterialDialog.Builder(getActivity())
+                        .positiveText("Remove")
+                        .negativeText("Cancel")
+                        .content("Remove stream?")
+                        .callback(new MaterialDialog.ButtonCallback() {
+                            @Override
+                            public void onPositive(MaterialDialog dialog) {
+                                super.onPositive(dialog);
+                                removeStream(myList.get(position).id);
+                            }
+
+                            @Override
+                            public void onNegative(MaterialDialog dialog) {
+                                super.onNegative(dialog);
+                                dialog.dismiss();
+                            }
+                        })
+                        .show();
+
+                return false;
+            }
+        });
+
         return v;
+    }
+
+    private void removeStream(final long streamId) {
+        new AsyncTask<Void, Void, Void>() {
+
+            MaterialDialog pBar;
+            boolean result = false;
+
+            @Override
+            protected void onPreExecute() {
+                pBar = new MaterialDialog.Builder(getActivity())
+                        .progress(true, 0)
+                        .cancelable(false)
+                        .content("Removing")
+                        .show();
+                pBar.getView().setKeepScreenOn(true);
+            }
+
+            @Override
+            protected Void doInBackground(Void... params) {
+                result = myTableStreamSession.removeStream(streamId);
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                if(pBar != null) pBar.dismiss();
+
+                if(result) {
+                    MyListItem itemToRemove = null;
+                    for(MyListItem item : myList) {
+                        if(item.id == streamId) {
+                            itemToRemove = item;
+                            break;
+                        }
+                    }
+
+                    if(itemToRemove != null) {
+                        myList.remove(itemToRemove);
+                        arrayAdapter.notifyDataSetChanged();
+                    }
+
+                    Toast.makeText(getActivity(), "Removed", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(getActivity(), "Stream having tweets cannot be removed", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }.execute();
     }
 
     @Override
@@ -75,13 +144,6 @@ public class ShowStreamsFragment extends Fragment {
 
     private void clearLists() {
         myList.clear();
-//        listMonday.clear();
-//        listTuesday.clear();
-//        listWednesday.clear();
-//        listThursday.clear();
-//        listFriday.clear();
-//        listSaturday.clear();
-//        listSunday.clear();
     }
 
     private class PopulateList extends AsyncTask<Void, MyListItem, Void> {
@@ -117,30 +179,6 @@ public class ShowStreamsFragment extends Fragment {
                         };
 
                         items.add(item);
-
-//                    switch (calendar.get(Calendar.DAY_OF_WEEK)) {
-//                        case Calendar.MONDAY:
-//                            listMonday.add(item);
-//                            break;
-//                        case Calendar.TUESDAY:
-//                            listTuesday.add(item);
-//                            break;
-//                        case Calendar.WEDNESDAY:
-//                            listWednesday.add(item);
-//                            break;
-//                        case Calendar.THURSDAY:
-//                            listThursday.add(item);
-//                            break;
-//                        case Calendar.FRIDAY:
-//                            listFriday.add(item);
-//                            break;
-//                        case Calendar.SATURDAY:
-//                            listSaturday.add(item);
-//                            break;
-//                        case Calendar.SUNDAY:
-//                            listSunday.add(item);
-//                            break;
-//                    }
                     }
                 } while(cursor.moveToNext());
                 cursor.close();
@@ -153,8 +191,6 @@ public class ShowStreamsFragment extends Fragment {
             sortByTimeDesc(items);
             myList.addAll(items);
             arrayAdapter = new MyListAdapter(getActivity(), myList);
-            Log.e("", "Is listView null: " + (listView == null));
-            Log.e("", "Is arrayAdapter null: " + (arrayAdapter == null));
 
             listView.setAdapter(arrayAdapter);
             tvInfo.setText(totalTweetCount + " tweets");

@@ -5,8 +5,12 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Turgut on 07.03.2015.
@@ -161,11 +165,57 @@ public class DBAdapterStreamSession {
         return mDB.update(DATABASE_TABLE, cv, where, null) != 0;
     }
 
+    public boolean updateTweetCount(long rowId, long tweetCount) {
+        String where = KEY_ROWID + "=" + rowId;
+
+        ContentValues cv = new ContentValues();
+        cv.put(KEY_TWEET_COUNT, tweetCount);
+
+        return mDB.update(DATABASE_TABLE, cv, where, null) != 0;
+    }
+
+    private boolean delete(long rowId) {
+        String where = KEY_ROWID + "=" + rowId;
+        return mDB.delete(DATABASE_TABLE, where, null) != 0;
+    }
+
     public Cursor getAll() {
         String where = null;
         Cursor c = mDB.query(true, DATABASE_TABLE, ALL_KEYS, where, null, null, null, null, null);
         if(c != null) c.moveToFirst();
 
         return c;
+    }
+
+    public boolean removeStream(long streamId) {
+//        select COUNT(_id) as C from tweet where stream_session_id = *streamId*;
+        boolean result = false;
+        String query = "select COUNT(" + DBAdapterTweet.KEY_ROWID + ") from " +
+                DBAdapterTweet.DATABASE_TABLE + " where " + DBAdapterTweet.KEY_STREAM_SESSION_ID + " = ";
+
+        final int COL_COUNT = 0;
+
+        // Get count of tweets for the stream
+        Cursor a = mDB.rawQuery(query + streamId + ";", null);
+        Log.e("Query", query + streamId + ";");
+
+        if(a != null) {
+            a.moveToFirst();
+
+            long count = a.getLong(COL_COUNT);
+            Log.e("Count", count + "");
+
+            if(count == 0) {
+                result = delete(streamId);
+            } else {
+                result = false;
+                updateTweetCount(streamId, count);
+            }
+
+            a.close();
+        }
+
+
+        return result;
     }
 }

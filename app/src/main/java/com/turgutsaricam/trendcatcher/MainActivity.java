@@ -255,6 +255,21 @@ public class MainActivity extends ActionBarActivity
     }
 
     @Override
+    public void clearAllStreamObjects() {
+        for(ShowMapFragment.StreamObject s : mAllStreamObjects) {
+            for(ShowMapFragment.StatusObject so : s.getStatusObjects()) {
+                so.status = null;
+                so = null;
+            }
+
+            s.getStatusObjects().clear();
+            s = null;
+        }
+
+        mAllStreamObjects.clear();
+    }
+
+    @Override
     public List<ShowMapFragment.StreamObject> getAllStreamObjects() {
         FragmentManager fm = getSupportFragmentManager();
         ShowMapFragment fragment = (ShowMapFragment) fm.findFragmentByTag("ShowMapFragment");

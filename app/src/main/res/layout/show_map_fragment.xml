@@ -12,53 +12,81 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:id="@+id/llInfoHolder"
-            android:layout_marginTop="10dp"
-            android:layout_marginLeft="10dp">
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
-            <Chronometer
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/chronometer"
+                android:orientation="horizontal"
+                android:id="@+id/llInfoHolder"
+                android:layout_marginTop="10dp"
+                android:layout_marginLeft="10dp"
+                android:layout_alignParentTop="true">
+
+                <Chronometer
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/chronometer"
+                    android:background="#32000000"
+                    android:padding="3dp"
+                    android:textColor="#FFFFFFFF" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvDurationLimit"
+                    android:textColor="#FFFFFFFF"
+                    android:paddingRight="3dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:visibility="gone"
+                    android:background="#32000000" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvCurrentStreamTweetCount"
+                    android:textColor="#FFFFFFFF"
+                    android:padding="3dp"
+                    android:layout_marginLeft="10dp"
+                    android:visibility="gone"
+                    android:background="#32000000" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvTweetCount"
+                    android:textColor="#FFFFFFFF"
+                    android:padding="3dp"
+                    android:layout_marginLeft="10dp"
+                    android:background="#32000000" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAutoMode"
+                    android:textColor="#FF00FF00"
+                    android:text="AUTO"
+                    android:padding="3dp"
+                    android:layout_marginLeft="10dp"
+                    android:background="#32000000"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:padding="8dp"
                 android:background="#32000000"
-                android:padding="3dp"
-                android:textColor="#FFFFFFFF"
-                />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/tvDurationLimit"
-                android:textColor="#FFFFFFFF"
-                android:paddingRight="3dp"
-                android:paddingTop="3dp"
-                android:paddingBottom="3dp"
                 android:visibility="gone"
-                android:background="#32000000"/>
+                android:id="@+id/tvTweet"
+                android:textColor="#FFFFFFFF"/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/tvCurrentStreamTweetCount"
-                android:textColor="#FFFFFFFF"
-                android:padding="3dp"
-                android:layout_marginLeft="10dp"
-                android:visibility="gone"
-                android:background="#32000000"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/tvTweetCount"
-                android:textColor="#FFFFFFFF"
-                android:padding="3dp"
-                android:layout_marginLeft="10dp"
-                android:background="#32000000"/>
-
-        </LinearLayout>
+        </RelativeLayout>
 
         <com.turgutsaricam.trendcatcher.MapUtilsView
             android:layout_width="match_parent"

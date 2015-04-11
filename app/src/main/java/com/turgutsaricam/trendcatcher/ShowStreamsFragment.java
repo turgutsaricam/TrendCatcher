@@ -195,6 +195,24 @@ public class ShowStreamsFragment extends Fragment {
             listView.setAdapter(arrayAdapter);
             tvInfo.setText(totalTweetCount + " tweets");
             tvInfo.setVisibility(View.VISIBLE);
+
+            // Scroll to the closest hour
+            Calendar cal = Calendar.getInstance();
+            int closestHour = cal.get(Calendar.HOUR_OF_DAY);
+            int itemPos = 0, tryCount = 0;
+            boolean found = false;
+            do {
+                for (MyListItem item : myList) {
+                    if (item.hour == closestHour) {
+                        listView.setSelection(itemPos);
+                        found = true;
+                        break;
+                    }
+                    itemPos++;
+                }
+                closestHour++;
+                tryCount++;
+            } while(tryCount < 4 && !found);
         }
     }
 

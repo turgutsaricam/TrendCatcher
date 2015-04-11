@@ -124,6 +124,7 @@ public class ShowMapFragment extends Fragment {
     final String SHARED_PREFS_TWEET_LIMIT = "tweet_limit";
 
     boolean autoMode = false;
+    int autoStreamCount = 1;
 
     public static class StreamObject {
         private long id;
@@ -429,6 +430,8 @@ public class ShowMapFragment extends Fragment {
 
     private void setAutoModeInfo() {
         tvAutoMode.setVisibility(autoMode ? View.VISIBLE : View.GONE);
+        if(autoMode) tvAutoMode.setText("AUTO " + autoStreamCount);
+
         tvTweet.setVisibility(autoMode ? View.VISIBLE : View.GONE);
     }
 
@@ -1026,6 +1029,7 @@ public class ShowMapFragment extends Fragment {
                             public void onNegative(MaterialDialog dialog) {
                                 super.onNegative(dialog);
                                 autoMode = false;
+                                autoStreamCount = 1;
                                 setAutoModeInfo();
                             }
                         })
@@ -1039,6 +1043,8 @@ public class ShowMapFragment extends Fragment {
                     public void run() {
                         if(autoMode) {
                             dialog.dismiss();
+                            autoStreamCount++;
+                            setAutoModeInfo();
                             startPredefinedStreamAuto();
                         }
                     }
@@ -1406,6 +1412,7 @@ public class ShowMapFragment extends Fragment {
                 break;
             case R.id.menuStopStream:
                 autoMode = false;
+                autoStreamCount = 1;
                 setAutoModeInfo();
                 if(fetchTweetsTask != null) fetchTweetsTask.stopStream(true);
                 break;

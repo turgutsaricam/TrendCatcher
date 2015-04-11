@@ -86,6 +86,13 @@ public class ShowStreamsPagerFragment extends Fragment {
 
             }
         });
+
+        Calendar cal = Calendar.getInstance();
+        int page = cal.get(Calendar.DAY_OF_WEEK) - 2;
+
+        if(page == -1) page = 6;
+
+        viewPager.setCurrentItem(page);
     }
 
     int restorePage = 0;
